@@ -71,8 +71,9 @@ def generate_batch_id():
     return f"BATCH_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 @app.route('/')
+@app.route('/admin/dashboard')
 @login_required
-def dashboard():
+def admin_dashboard():
     """仪表板"""
     try:
         conn = get_db_connection()
@@ -186,7 +187,7 @@ def login():
                 conn.commit()
                 
                 flash('登录成功', 'success')
-                return redirect(url_for('dashboard'))
+                return redirect(url_for('admin_dashboard'))
             else:
                 flash('用户名或密码错误', 'error')
             
