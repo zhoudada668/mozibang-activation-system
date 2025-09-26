@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}生成激活码 - MoziBang 管理后台{% endblock %}
+{% block page_title %}生成激活码{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-plus-circle me-2"></i>批量生成激活码
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="generateForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="count" class="form-label">生成数量 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="count" name="count" 
+                                   min="1" max="1000" value="10" required>
+                            <div class="form-text">一次最多生成1000个激活码</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="code_type" class="form-label">激活码类型 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="code_type" name="code_type" required>
+                                <option value="pro_lifetime" selected>Pro永久版</option>
+                                <option value="pro_1year">Pro一年版</option>
+                                <option value="pro_6month">Pro半年版</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="batch_name" class="form-label">批次名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="batch_name" name="batch_name" 
+                               placeholder="例如：2024年春节活动激活码" required>
+                        <div class="form-text">用于标识这批激活码的用途或活动</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="notes" class="form-label">备注信息</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="可选：添加关于这批激活码的详细说明"></textarea>
+                    </div>
+                    
+                    <!-- 预览信息 -->
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>生成预览</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>激活码格式：</strong> MOZIBANG-PRO-XXXX-XXXX
+                            </div>
+                            <div class="col-md-6">
+                                <strong>生成时间：</strong> <span id="currentTime"></span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <strong>数量：</strong> <span id="previewCount">10</span> 个
+                            </div>
+                            <div class="col-md-6">
+                                <strong>类型：</strong> <span id="previewType">Pro永久版</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('codes') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>返回列表
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="generateBtn">
+                            <i class="bi bi-gear me-1"></i>开始生成
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 生成说明 -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>使用说明
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>激活码类型说明：</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i><strong>Pro永久版：</strong>永久有效的Pro功能</li>
+                            <li><i class="bi bi-check-circle text-warning me-2"></i><strong>Pro一年版：</strong>激活后有效期1年</li>
+                            <li><i class="bi bi-check-circle text-info me-2"></i><strong>Pro半年版：</strong>激活后有效期6个月</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>注意事项：</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-exclamation-triangle text-warning me-2"></i>每个激活码只能使用一次</li>
+                            <li><i class="bi bi-exclamation-triangle text-warning me-2"></i>生成后无法修改激活码内容</li>
+                            <li><i class="bi bi-exclamation-triangle text-warning me-2"></i>建议妥善保管激活码</li>
+                            <li><i class="bi bi-exclamation-triangle text-warning me-2"></i>可在激活码列表中禁用未使用的激活码</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 更新当前时间
+function updateCurrentTime() {
+    const now = new Date();
+    document.getElementById('currentTime').textContent = now.toLocaleString('zh-CN');
+}
+
+// 更新预览信息
+function updatePreview() {
+    const count = document.getElementById('count').value || 10;
+    const codeType = document.getElementById('code_type').value;
+    
+    document.getElementById('previewCount').textContent = count;
+    
+    const typeMap = {
+        'pro_lifetime': 'Pro永久版',
+        'pro_1year': 'Pro一年版',
+        'pro_6month': 'Pro半年版'
+    };
+    document.getElementById('previewType').textContent = typeMap[codeType] || 'Pro永久版';
+}
+
+// 表单提交处理
+document.getElementById('generateForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('generateBtn');
+    const count = parseInt(document.getElementById('count').value);
+    
+    if (count > 100) {
+        if (!confirm(`您即将生成 ${count} 个激活码，这可能需要一些时间。确定继续吗？`)) {
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // 禁用按钮，显示加载状态
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>生成中...';
+});
+
+// 初始化
+updateCurrentTime();
+updatePreview();
+setInterval(updateCurrentTime, 1000);
+
+// 监听输入变化
+document.getElementById('count').addEventListener('input', updatePreview);
+document.getElementById('code_type').addEventListener('change', updatePreview);
+
+// 数量验证
+document.getElementById('count').addEventListener('input', function() {
+    const value = parseInt(this.value);
+    if (value > 1000) {
+        this.value = 1000;
+        alert('一次最多生成1000个激活码');
+    } else if (value < 1) {
+        this.value = 1;
+    }
+    updatePreview();
+});
+</script>
+{% endblock %}

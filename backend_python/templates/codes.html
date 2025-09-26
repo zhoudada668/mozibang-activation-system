@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}激活码管理 - MoziBang 管理后台{% endblock %}
+{% block page_title %}激活码管理{% endblock %}
+
+{% block content %}
+<!-- 页面头部 -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">激活码列表</h4>
+        <small class="text-muted">共 {{ total }} 个激活码</small>
+    </div>
+    <div>
+        <a href="{{ url_for('generate') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>生成新激活码
+        </a>
+    </div>
+</div>
+
+<!-- 筛选和搜索 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="code_type" class="form-label">激活码类型</label>
+                <select class="form-select" id="code_type" name="code_type">
+                    <option value="">全部类型</option>
+                    <option value="monthly" {% if code_type == 'monthly' %}selected{% endif %}>月度会员</option>
+                    <option value="yearly" {% if code_type == 'yearly' %}selected{% endif %}>年度会员</option>
+                    <option value="lifetime" {% if code_type == 'lifetime' %}selected{% endif %}>终身会员</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">使用状态</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">全部状态</option>
+                    <option value="unused" {% if status == 'unused' %}selected{% endif %}>未使用</option>
+                    <option value="used" {% if status == 'used' %}selected{% endif %}>已使用</option>
+                    <option value="disabled" {% if status == 'disabled' %}selected{% endif %}>已禁用</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="search" class="form-label">搜索</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       placeholder="搜索激活码、批次名称..." value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 激活码列表 -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if codes %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>激活码</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>批次名称</th>
+                        <th>使用者</th>
+                        <th>创建时间</th>
+                        <th>使用时间</th>
+                        <th>备注</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code in codes %}
+                    <tr>
+                        <td>
+                            <code class="text-primary">{{ code[1] }}</code>
+                            <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyToClipboard('{{ code[1] }}')" 
+                                    title="复制激活码">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </td>
+                        <td>
+                            {% if code[2] == 'monthly' %}
+                                <span class="badge bg-info">月度会员</span>
+                            {% elif code[2] == 'yearly' %}
+                                <span class="badge bg-warning">年度会员</span>
+                            {% elif code[2] == 'lifetime' %}
+                                <span class="badge bg-success">终身会员</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ code[2] }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if code[3] == 1 %}
+                                <span class="badge bg-success">已使用</span>
+                            {% elif code[4] == 1 %}
+                                <span class="badge bg-danger">已禁用</span>
+                            {% else %}
+                                <span class="badge bg-primary">未使用</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ code[5] or '-' }}</td>
+                        <td>{{ code[6] or '-' }}</td>
+                        <td>
+                            {% if code[7] %}
+                                <small>{{ code[7][:19] }}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if code[8] %}
+                                <small>{{ code[8][:19] }}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if code[9] %}
+                                <small title="{{ code[9] }}">{{ code[9][:20] }}{% if code[9]|length > 20 %}...{% endif %}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if code[3] == 0 and code[4] == 0 %}
+                                <button class="btn btn-outline-danger" onclick="disableCode('{{ code[1] }}')" 
+                                        title="禁用激活码">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                                {% elif code[4] == 1 %}
+                                <button class="btn btn-outline-success" onclick="enableCode('{{ code[1] }}')" 
+                                        title="启用激活码">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-outline-info" onclick="viewDetails('{{ code[1] }}')" 
+                                        title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if total_pages > 1 %}
+        <nav aria-label="激活码分页">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}&code_type={{ code_type }}&status={{ status }}&search={{ request.args.get('search', '') }}">上一页</a>
+                </li>
+                {% endif %}
+                
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ p }}</span>
+                    </li>
+                    {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}&code_type={{ code_type }}&status={{ status }}&search={{ request.args.get('search', '') }}">{{ p }}</a>
+                    </li>
+                    {% elif p == 4 or p == total_pages - 3 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}&code_type={{ code_type }}&status={{ status }}&search={{ request.args.get('search', '') }}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <!-- 空状态 -->
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">暂无激活码数据</h5>
+            <p class="text-muted">还没有生成任何激活码</p>
+            <a href="{{ url_for('generate') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>生成第一批激活码
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        showToast('激活码已复制到剪贴板');
+    });
+}
+
+function disableCode(code) {
+    if (confirm('确定要禁用这个激活码吗？')) {
+        // 这里可以添加AJAX请求来禁用激活码
+        console.log('禁用激活码:', code);
+    }
+}
+
+function enableCode(code) {
+    if (confirm('确定要启用这个激活码吗？')) {
+        // 这里可以添加AJAX请求来启用激活码
+        console.log('启用激活码:', code);
+    }
+}
+
+function viewDetails(code) {
+    // 这里可以添加查看详情的功能
+    console.log('查看激活码详情:', code);
+}
+
+function showToast(message) {
+    // 简单的提示功能
+    const toast = document.createElement('div');
+    toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 1050;';
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

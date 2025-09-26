@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}激活码管理 - MoziBang 管理后台{% endblock %}
+{% block page_title %}激活码管理{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">激活码列表</h4>
+        <small class="text-muted">共 {{ total }} 个激活码</small>
+    </div>
+    <div>
+        <a href="{{ url_for('generate') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>生成新激活码
+        </a>
+    </div>
+</div>
+
+<!-- 筛选和搜索 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="status" class="form-label">状态筛选</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">全部状态</option>
+                    <option value="unused" {% if request.args.get('status') == 'unused' %}selected{% endif %}>未使用</option>
+                    <option value="used" {% if request.args.get('status') == 'used' %}selected{% endif %}>已使用</option>
+                    <option value="expired" {% if request.args.get('status') == 'expired' %}selected{% endif %}>已过期</option>
+                    <option value="disabled" {% if request.args.get('status') == 'disabled' %}selected{% endif %}>已禁用</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="code_type" class="form-label">类型筛选</label>
+                <select class="form-select" id="code_type" name="code_type">
+                    <option value="">全部类型</option>
+                    <option value="pro_lifetime" {% if request.args.get('code_type') == 'pro_lifetime' %}selected{% endif %}>Pro永久版</option>
+                    <option value="pro_1year" {% if request.args.get('code_type') == 'pro_1year' %}selected{% endif %}>Pro一年版</option>
+                    <option value="pro_6month" {% if request.args.get('code_type') == 'pro_6month' %}selected{% endif %}>Pro半年版</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="search" class="form-label">搜索激活码</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       placeholder="输入激活码或批次名称" value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search me-1"></i>搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 激活码表格 -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th width="50">#</th>
+                        <th>激活码</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>批次</th>
+                        <th>创建时间</th>
+                        <th>使用时间</th>
+                        <th>使用用户</th>
+                        <th width="120">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code in codes %}
+                    <tr>
+                        <td>{{ (page - 1) * 20 + loop.index }}</td>
+                        <td>
+                            <span class="code-display">{{ code.code }}</span>
+                            <button class="btn btn-link btn-sm p-0 ms-2" onclick="copyCode('{{ code.code }}')" title="复制">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </td>
+                        <td>
+                            {% if code.code_type == 'pro_lifetime' %}
+                                <span class="badge bg-success">Pro永久版</span>
+                            {% elif code.code_type == 'pro_1year' %}
+                                <span class="badge bg-warning">Pro一年版</span>
+                            {% elif code.code_type == 'pro_6month' %}
+                                <span class="badge bg-info">Pro半年版</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if code.status == 'unused' %}
+                                <span class="badge bg-secondary">未使用</span>
+                            {% elif code.status == 'used' %}
+                                <span class="badge bg-success">已使用</span>
+                            {% elif code.status == 'expired' %}
+                                <span class="badge bg-warning">已过期</span>
+                            {% elif code.status == 'disabled' %}
+                                <span class="badge bg-danger">已禁用</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if code.batch_name %}
+                                <small class="text-muted" title="{{ code.batch_id }}">{{ code.batch_name }}</small>
+                            {% else %}
+                                <small class="text-muted">{{ code.batch_id or '-' }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ code.created_at.strftime('%Y-%m-%d %H:%M') if code.created_at else '-' }}</small>
+                        </td>
+                        <td>
+                            <small>{{ code.used_at.strftime('%Y-%m-%d %H:%M') if code.used_at else '-' }}</small>
+                        </td>
+                        <td>
+                            {% if code.used_by_user %}
+                                <small class="text-truncate d-inline-block" style="max-width: 120px;" title="{{ code.used_by_user }}">
+                                    {{ code.used_by_user }}
+                                </small>
+                            {% else %}
+                                <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                {% if code.status == 'unused' %}
+                                    <button class="btn btn-outline-danger btn-action" 
+                                            onclick="disableCode('{{ code.code }}')" title="禁用">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                {% endif %}
+                                <button class="btn btn-outline-info btn-action" 
+                                        onclick="showCodeDetails('{{ code.code }}')" title="详情">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">
+                            <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2">暂无激活码数据</p>
+                            <a href="{{ url_for('generate') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i>生成第一批激活码
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 分页 -->
+{% if total_pages > 1 %}
+<nav aria-label="激活码分页" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page - 1 }}{% if request.args.get('status') %}&status={{ request.args.get('status') }}{% endif %}{% if request.args.get('code_type') %}&code_type={{ request.args.get('code_type') }}{% endif %}{% if request.args.get('search') %}&search={{ request.args.get('search') }}{% endif %}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <li class="page-item active">
+                    <span class="page-link">{{ p }}</span>
+                </li>
+            {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ p }}{% if request.args.get('status') %}&status={{ request.args.get('status') }}{% endif %}{% if request.args.get('code_type') %}&code_type={{ request.args.get('code_type') }}{% endif %}{% if request.args.get('search') %}&search={{ request.args.get('search') }}{% endif %}">{{ p }}</a>
+                </li>
+            {% elif p == page - 3 or p == page + 3 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page + 1 }}{% if request.args.get('status') %}&status={{ request.args.get('status') }}{% endif %}{% if request.args.get('code_type') %}&code_type={{ request.args.get('code_type') }}{% endif %}{% if request.args.get('search') %}&search={{ request.args.get('search') }}{% endif %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<!-- 激活码详情模态框 -->
+<div class="modal fade" id="codeDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">激活码详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="codeDetailsContent">
+                <!-- 详情内容将通过JavaScript加载 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 隐藏的文本区域用于复制 -->
+<textarea id="copyTextarea" style="position: absolute; left: -9999px;"></textarea>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 复制激活码
+function copyCode(code) {
+    const textarea = document.getElementById('copyTextarea');
+    textarea.value = code;
+    textarea.select();
+    document.execCommand('copy');
+    
+    showToast('激活码已复制到剪贴板', 'success');
+}
+
+// 禁用激活码
+function disableCode(code) {
+    if (!confirm(`确定要禁用激活码 ${code} 吗？\n禁用后该激活码将无法使用。`)) {
+        return;
+    }
+    
+    fetch('/api/disable_code', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: code })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showToast('操作失败：' + error.message, 'error');
+    });
+}
+
+// 显示激活码详情
+function showCodeDetails(code) {
+    // 这里可以通过AJAX获取详细信息
+    const content = `
+        <div class="row">
+            <div class="col-12">
+                <h6>激活码信息</h6>
+                <p><strong>激活码：</strong> <span class="code-display">${code}</span></p>
+                <p><small class="text-muted">更多详细信息可以通过API获取...</small></p>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('codeDetailsContent').innerHTML = content;
+    const modal = new bootstrap.Modal(document.getElementById('codeDetailsModal'));
+    modal.show();
+}
+
+// 显示提示消息
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+// 创建提示容器
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+    return container;
+}
+</script>
+{% endblock %}

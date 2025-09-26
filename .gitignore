@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+backend_python/venv/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend_python/mozibang_activation.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules
+node_modules/
+
+# Backup files
+*.bak
+*.backup
+
+# Test files
+test_*.py
+*_test.py
+
+# Reports
+*.json
+reports/
+backend_python/activation_report_*.json
+
+# Temporary files
+tmp/
+temp/
+
+# Chrome extension development
+source/
+*.crx
+*.pem
+
+# BMAD method (development framework)
+bmad-method/
+
+# Large directories that don't need to be deployed
+docs/
+tests/
+scripts/

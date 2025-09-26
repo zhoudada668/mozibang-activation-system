@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}仪表盘 - MoziBang 管理后台{% endblock %}
+{% block page_title %}仪表盘{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 统计卡片 -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">总激活码</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ stats.total_codes or 0 }}</span>
+                    </div>
+                    <div class="col-auto">
+                        <div class="icon icon-shape bg-primary text-white rounded-circle shadow">
+                            <i class="bi bi-key" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">已使用</h5>
+                        <span class="h2 font-weight-bold mb-0 text-success">{{ stats.used_codes or 0 }}</span>
+                    </div>
+                    <div class="col-auto">
+                        <div class="icon icon-shape bg-success text-white rounded-circle shadow">
+                            <i class="bi bi-check-circle" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">未使用</h5>
+                        <span class="h2 font-weight-bold mb-0 text-warning">{{ stats.unused_codes or 0 }}</span>
+                    </div>
+                    <div class="col-auto">
+                        <div class="icon icon-shape bg-warning text-white rounded-circle shadow">
+                            <i class="bi bi-clock" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Pro用户</h5>
+                        <span class="h2 font-weight-bold mb-0 text-info">{{ stats.pro_users or 0 }}</span>
+                    </div>
+                    <div class="col-auto">
+                        <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                            <i class="bi bi-people" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 使用率图表 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>激活码使用情况
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="usageChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 最近活动 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity me-2"></i>快速统计
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>最近7天激活</span>
+                    <span class="badge bg-primary">{{ stats.recent_activations or 0 }}</span>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>使用率</span>
+                    <span class="badge bg-success">
+                        {% if stats.total_codes and stats.total_codes > 0 %}
+                            {{ "%.1f"|format((stats.used_codes or 0) * 100 / stats.total_codes) }}%
+                        {% else %}
+                            0.0%
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>剩余可用</span>
+                    <span class="badge bg-warning">{{ stats.unused_codes or 0 }}</span>
+                </div>
+                
+                <hr>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('generate') }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> 生成激活码
+                        </a>
+                        <a href="{{ url_for('codes') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-list me-1"></i>查看所有激活码
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 系统状态 -->
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>系统状态
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-database text-success me-2"></i>
+                            <span>数据库连接</span>
+                            <span class="badge bg-success ms-auto">正常</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-server text-success me-2"></i>
+                            <span>API服务</span>
+                            <span class="badge bg-success ms-auto">运行中</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-shield-check text-success me-2"></i>
+                            <span>安全状态</span>
+                            <span class="badge bg-success ms-auto">安全</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 使用率饼图
+const ctx = document.getElementById('usageChart').getContext('2d');
+const usageChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['已使用', '未使用', '已禁用'],
+        datasets: [{
+            data: [
+                {{ stats.used_codes or 0 }},
+                {{ stats.unused_codes or 0 }},
+                {{ (stats.total_codes or 0) - (stats.used_codes or 0) - (stats.unused_codes or 0) }}
+            ],
+            backgroundColor: [
+                '#28a745',
+                '#ffc107',
+                '#dc3545'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+
+// 定时刷新数据（每5分钟）
+setInterval(function() {
+    location.reload();
+}, 300000);
+</script>
+{% endblock %}

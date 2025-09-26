@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MoziBang Link Extractor</title>
+  <style>
+    :root {
+      --primary-color: #1e88e5;
+      --primary-dark: #1565c0;
+      --secondary-color: #26a69a;
+      --secondary-dark: #00897b;
+      --text-color: #37474f;
+      --light-text: #78909c;
+      --background: #ffffff;
+      --light-bg: #f5f7fa;
+      --border-color: #e0e6ed;
+      --success-color: #66bb6a;
+      --success-dark: #43a047;
+      --google-blue: #4285f4;
+      --google-red: #ea4335;
+    }
+    
+    body {
+      width: 720px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-color);
+      background-color: var(--background);
+      margin: 0;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .header img {
+      width: 32px;
+      height: 32px;
+      margin-right: 12px;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    /* 登录相关样式 */
+    .login-section {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .login-container {
+      background-color: var(--light-bg);
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .google-login-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 20px auto;
+      transition: background-color 0.2s;
+    }
+
+    .google-login-btn img {
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+    }
+
+    .google-login-btn:hover {
+      background-color: #3367d6;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+      padding: 8px;
+      background: var(--light-bg);
+      border-radius: 24px;
+      gap: 8px;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .user-name {
+      font-size: 14px;
+      color: var(--text-color);
+      font-weight: 500;
+    }
+
+    .logout-btn {
+      padding: 6px 12px;
+      background-color: var(--light-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      color: var(--text-color);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .logout-btn:hover {
+      background-color: var(--border-color);
+      color: var(--primary-dark);
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .button {
+      padding: 10px 16px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .button:hover {
+      background-color: var(--primary-dark);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      transform: translateY(-1px);
+    }
+    
+    .button:disabled {
+      background-color: var(--border-color);
+      color: var(--light-text);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    
+    .button.secondary {
+      background-color: var(--light-bg);
+      color: var(--text-color);
+    }
+    
+    .button.secondary:hover {
+      background-color: var(--border-color);
+    }
+    
+    .bulk-extract-btn {
+      background-color: var(--success-color);
+    }
+    
+    .bulk-extract-btn:hover {
+      background-color: var(--success-dark);
+    }
+    
+    .filter-container {
+      margin-bottom: 16px;
+    }
+    
+    .filter-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    
+    .filter-input:focus {
+      border-color: var(--primary-color);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(30,136,229,0.1);
+    }
+    
+    /* 进度条和提醒样式 */
+    .progress-container {
+      margin: 16px 0;
+      padding: 12px;
+      background-color: var(--light-bg);
+      border-radius: 6px;
+      display: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .progress-bar-outer {
+      height: 8px;
+      background-color: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-bar-inner {
+      height: 100%;
+      background-color: var(--primary-color);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .warning-message {
+      margin-top: 8px;
+      color: #f44336;
+      font-weight: 500;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .warning-message::before {
+      content: "⚠️";
+      margin-right: 6px;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 0.7; }
+      50% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+    
+    .pulsing {
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+    
+    .data-stats {
+      margin: 16px 0;
+      padding: 12px;
+      background-color: var(--light-bg);
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--text-color);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .data-count {
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 12px;
+      font-size: 13px;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .data-table th {
+      background-color: var(--light-bg);
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .data-table tr:hover {
+      background-color: rgba(0,0,0,0.02);
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--light-text);
+      font-size: 15px;
+      background-color: var(--light-bg);
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    
+    .status {
+      margin-top: 16px;
+      color: var(--light-text);
+      font-size: 13px;
+      font-style: italic;
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 0;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0,0,0,0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary-color);
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* 额度状态栏样式 */
+    .license-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .license-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .usage-text {
+      font-size: 14px;
+      color: var(--text-color);
+      font-weight: 500;
+    }
+    
+    .pro-badge {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .upgrade-btn {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .upgrade-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .activation-btn {
+      background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(38, 166, 154, 0.3);
+    }
+    
+    .activation-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(38, 166, 154, 0.4);
+    }
+
+    /* 激活码弹窗样式 */
+    .activation-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .activation-modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .activation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .activation-header h3 {
+      margin: 0;
+      color: var(--text-color);
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--light-text);
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+      background-color: var(--light-bg);
+      color: var(--text-color);
+    }
+
+    .activation-body {
+      padding: 24px;
+    }
+
+    .activation-body p {
+      margin: 0 0 16px 0;
+      color: var(--text-color);
+      line-height: 1.5;
+    }
+
+    .activation-input-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .activation-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+      outline: none;
+    }
+
+    .activation-input:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
+    }
+
+    .activate-btn {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .activate-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
+    }
+
+    .activate-btn:disabled {
+      background: var(--light-text);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .activation-info {
+      background: var(--light-bg);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .activation-info p {
+      margin: 0 0 12px 0;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .activation-info ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style: none;
+    }
+
+    .activation-info li {
+      margin-bottom: 8px;
+      color: var(--text-color);
+      position: relative;
+    }
+
+    .activation-info li:before {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 4px;
+      background: var(--success-color);
+      border-radius: 50%;
+    }
+
+    .activation-status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .activation-status.success {
+      background-color: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #c8e6c9;
+      display: block;
+    }
+
+    .activation-status.error {
+      background-color: #ffebee;
+      color: #c62828;
+      border: 1px solid #ffcdd2;
+      display: block;
+    }
+
+    .activation-status.loading {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      border: 1px solid #bbdefb;
+      display: block;
+    }
+    
+    .usage-warning {
+      color: #f44336;
+      font-weight: 600;
+    }
+    
+    .usage-critical {
+      color: #d32f2f;
+      font-weight: 700;
+      animation: pulse 1.5s infinite;
+    }
+</style>
+</head>
+<body>
+    <div class="header">
+    <img src="images/icon48.png" alt="图标">
+    <h1>MoziBang Link Extractor</h1>
+    <div id="userInfo" class="user-info"></div>
+  </div>
+
+  <!-- 登录部分 -->
+  <div id="loginSection" class="login-section">
+    <div class="login-container">
+      <h2>欢迎使用 SeaTra Link Extractor</h2>
+      <p>请使用Google账号登录以使用完整功能</p>
+      <button id="loginBtn" class="google-login-btn">
+        <img src="https://www.google.com/favicon.ico" alt="Google图标">
+        使用Google登录
+      </button>
+    </div>
+  </div>
+
+  <!-- 主要内容部分 -->
+  <div id="mainContent" style="display: none;">
+  
+  <!-- 额度状态栏 -->
+  <div id="licenseStatus" class="license-status">
+    <div class="license-info">
+      <span id="usageInfo" class="usage-text">免费版 0/100</span>
+      <span id="proStatus" class="pro-badge" style="display: none;">Pro会员</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button id="upgradeBtn" class="upgrade-btn">升级Pro</button>
+      <button id="activationBtn" class="activation-btn">激活码升级</button>
+          </div>
+  </div>
+
+  <!-- 激活码输入弹窗 -->
+  <div id="activationModal" class="activation-modal" style="display: none;">
+    <div class="activation-modal-content">
+      <div class="activation-header">
+        <h3>激活Pro版本</h3>
+        <button id="closeActivationModal" class="close-btn">&times;</button>
+      </div>
+      <div class="activation-body">
+        <p>请输入您的激活码来升级到Pro版本：</p>
+        <div class="activation-input-group">
+          <input type="text" id="activationCodeInput" class="activation-input" 
+                 placeholder="请输入激活码" maxlength="20">
+          <button id="activateBtn" class="activate-btn">激活</button>
+        </div>
+        <div class="activation-info">
+          <p><strong>Pro版本特权：</strong></p>
+          <ul>
+            <li>✅ 无限制数据导出</li>
+            <li>✅ 高级数据提取功能</li>
+            <li>✅ 优先技术支持</li>
+            <li>✅ 永久有效（根据激活码类型）</li>
+          </ul>
+        </div>
+        <div id="activationStatus" class="activation-status"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 进度条和提醒信息移到这里（页头位置） -->
+  <div id="progressContainer" class="progress-container">
+    <div class="progress-info">
+      <span>提取进度：<span id="progressText">0/0</span></span>
+      <span><span id="progressPercent">0%</span></span>
+    </div>
+    <div class="progress-bar-outer">
+      <div id="progressBar" class="progress-bar-inner"></div>
+    </div>
+    <div id="warningMessage" class="warning-message pulsing">提取正在进行中，请勿离开本页</div>
+  </div>
+  
+  <div class="controls">
+    <button id="extractBulkBtn" class="button bulk-extract-btn">批量提取数据</button>
+    <button id="extractBulkDetailBtn" class="button bulk-detail-btn" disabled>批量提取详情</button>
+    <button id="exportBtn" class="button" disabled>导出CSV</button>
+  </div>
+  
+  <div class="filter-container">
+    <input type="text" id="filterInput" class="filter-input" placeholder="搜索...">
+  </div>
+  
+  <div class="data-stats">
+    <div>共找到 <span id="dataCount" class="data-count">0</span> 条数据</div>
+    <div>页面URL: <span id="pageUrl" class="page-url">-</span></div>
+  </div>
+  
+  <div id="dataContainer">
+    <div class="empty-message">点击"批量提取数据"按钮开始提取</div>
+  </div>
+  
+  <div id="status" class="status"></div>
+  
+  <script src="license.js"></script>
+<script src="payment.js"></script>
+<script src="secure-data.js"></script>
+<script src="activation_config.js"></script>
+<script src="activation.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
+<div id="progressContainer" class="progress-container">
+  <div class="progress-info">
+    <span>提取进度：<span id="progressText">0/0</span></span>
+    <span><span id="progressPercent">0%</span></span>
+  </div>
+  <div class="progress-bar-outer">
+    <div id="progressBar" class="progress-bar-inner"></div>
+  </div>
+  <div id="warningMessage" class="warning-message pulsing">提取正在进行中，请勿离开本页</div>
+</div>

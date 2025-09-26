@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}Pro用户管理 - MoziBang 管理后台{% endblock %}
+{% block page_title %}Pro用户管理{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">Pro用户列表</h4>
+        <small class="text-muted">共 {{ users|length }} 个Pro用户</small>
+    </div>
+    <div>
+        <button class="btn btn-outline-primary" onclick="exportUsers()">
+            <i class="bi bi-download me-1"></i>导出用户数据
+        </button>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">永久Pro用户</h6>
+                        <h4 class="mb-0">{{ users | selectattr('pro_type', 'equalto', 'lifetime') | list | length }}</h4>
+                    </div>
+                    <i class="bi bi-infinity" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">一年期Pro用户</h6>
+                        <h4 class="mb-0">{{ users | selectattr('pro_type', 'equalto', '1year') | list | length }}</h4>
+                    </div>
+                    <i class="bi bi-calendar" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">半年期Pro用户</h6>
+                        <h4 class="mb-0">{{ users | selectattr('pro_type', 'equalto', '6month') | list | length }}</h4>
+                    </div>
+                    <i class="bi bi-calendar2-week" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">今日新增</h6>
+                        <h4 class="mb-0">
+                            {{ users | selectattr('activated_at') | selectattr('activated_at', 'ge', moment().startOf('day')) | list | length }}
+                        </h4>
+                    </div>
+                    <i class="bi bi-person-plus" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选和搜索 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="pro_type" class="form-label">Pro类型筛选</label>
+                <select class="form-select" id="pro_type" name="pro_type">
+                    <option value="">全部类型</option>
+                    <option value="lifetime" {% if request.args.get('pro_type') == 'lifetime' %}selected{% endif %}>永久版</option>
+                    <option value="1year" {% if request.args.get('pro_type') == '1year' %}selected{% endif %}>一年版</option>
+                    <option value="6month" {% if request.args.get('pro_type') == '6month' %}selected{% endif %}>半年版</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">状态筛选</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">全部状态</option>
+                    <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>有效</option>
+                    <option value="expired" {% if request.args.get('status') == 'expired' %}selected{% endif %}>已过期</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="search" class="form-label">搜索用户</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       placeholder="输入用户邮箱或姓名" value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search me-1"></i>搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 用户表格 -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th width="50">#</th>
+                        <th>用户信息</th>
+                        <th>Pro类型</th>
+                        <th>激活时间</th>
+                        <th>到期时间</th>
+                        <th>激活码</th>
+                        <th>最后登录</th>
+                        <th>状态</th>
+                        <th width="100">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <div>
+                                <strong>{{ user.user_name or '未设置' }}</strong>
+                                <br>
+                                <small class="text-muted">{{ user.user_email }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            {% if user.pro_type == 'lifetime' %}
+                                <span class="badge bg-success">永久版</span>
+                            {% elif user.pro_type == '1year' %}
+                                <span class="badge bg-warning">一年版</span>
+                            {% elif user.pro_type == '6month' %}
+                                <span class="badge bg-info">半年版</span>
+                            {% else %}
+                                <span class="badge bg-secondary">未知</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ user.activated_at.strftime('%Y-%m-%d %H:%M') if user.activated_at else '-' }}</small>
+                        </td>
+                        <td>
+                            {% if user.expires_at %}
+                                <small>{{ user.expires_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                {% if user.expires_at < moment() %}
+                                    <br><small class="text-danger">已过期</small>
+                                {% endif %}
+                            {% else %}
+                                <small class="text-success">永久有效</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.activation_code_used %}
+                                <span class="code-display small">{{ user.activation_code_used }}</span>
+                                <button class="btn btn-link btn-sm p-0 ms-1" onclick="copyCode('{{ user.activation_code_used }}')" title="复制">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            {% else %}
+                                <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '从未登录' }}</small>
+                        </td>
+                        <td>
+                            {% if user.is_pro %}
+                                {% if user.expires_at and user.expires_at < moment() %}
+                                    <span class="badge bg-danger">已过期</span>
+                                {% else %}
+                                    <span class="badge bg-success">有效</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">非Pro</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-info btn-action" 
+                                        onclick="showUserDetails('{{ user.user_email }}')" title="详情">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                                {% if user.is_pro and (not user.expires_at or user.expires_at > moment()) %}
+                                    <button class="btn btn-outline-warning btn-action" 
+                                            onclick="revokeProStatus('{{ user.user_email }}')" title="撤销Pro">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">
+                            <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2">暂无Pro用户数据</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 用户详情模态框 -->
+<div class="modal fade" id="userDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">用户详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userDetailsContent">
+                <!-- 详情内容将通过JavaScript加载 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 隐藏的文本区域用于复制 -->
+<textarea id="copyTextarea" style="position: absolute; left: -9999px;"></textarea>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 复制激活码
+function copyCode(code) {
+    const textarea = document.getElementById('copyTextarea');
+    textarea.value = code;
+    textarea.select();
+    document.execCommand('copy');
+    
+    showToast('激活码已复制到剪贴板', 'success');
+}
+
+// 显示用户详情
+function showUserDetails(email) {
+    // 从表格中获取用户信息（简化实现）
+    const rows = document.querySelectorAll('tbody tr');
+    let userInfo = null;
+    
+    rows.forEach(row => {
+        const emailCell = row.querySelector('td:nth-child(2) small');
+        if (emailCell && emailCell.textContent === email) {
+            const cells = row.querySelectorAll('td');
+            userInfo = {
+                email: email,
+                name: cells[1].querySelector('strong').textContent,
+                proType: cells[2].textContent.trim(),
+                activatedAt: cells[3].textContent.trim(),
+                expiresAt: cells[4].textContent.trim(),
+                activationCode: cells[5].querySelector('.code-display') ? cells[5].querySelector('.code-display').textContent : '-',
+                lastLogin: cells[6].textContent.trim(),
+                status: cells[7].textContent.trim()
+            };
+        }
+    });
+    
+    if (userInfo) {
+        const content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>基本信息</h6>
+                    <p><strong>用户姓名：</strong> ${userInfo.name}</p>
+                    <p><strong>邮箱地址：</strong> ${userInfo.email}</p>
+                    <p><strong>Pro类型：</strong> ${userInfo.proType}</p>
+                    <p><strong>当前状态：</strong> ${userInfo.status}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>激活信息</h6>
+                    <p><strong>激活时间：</strong> ${userInfo.activatedAt}</p>
+                    <p><strong>到期时间：</strong> ${userInfo.expiresAt}</p>
+                    <p><strong>使用激活码：</strong> <span class="code-display">${userInfo.activationCode}</span></p>
+                    <p><strong>最后登录：</strong> ${userInfo.lastLogin}</p>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-12">
+                    <h6>操作记录</h6>
+                    <p class="text-muted">详细的操作记录可以通过API获取...</p>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('userDetailsContent').innerHTML = content;
+        const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
+        modal.show();
+    }
+}
+
+// 撤销Pro状态
+function revokeProStatus(email) {
+    if (!confirm(`确定要撤销用户 ${email} 的Pro状态吗？\n此操作不可撤销。`)) {
+        return;
+    }
+    
+    // 这里应该调用API来撤销Pro状态
+    showToast('撤销Pro状态功能需要实现相应的API接口', 'warning');
+}
+
+// 导出用户数据
+function exportUsers() {
+    // 获取表格数据
+    const rows = document.querySelectorAll('tbody tr');
+    let csvContent = '序号,用户姓名,邮箱地址,Pro类型,激活时间,到期时间,激活码,最后登录,状态\n';
+    
+    rows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 1) {
+            const name = cells[1].querySelector('strong').textContent;
+            const email = cells[1].querySelector('small').textContent;
+            const proType = cells[2].textContent.trim();
+            const activatedAt = cells[3].textContent.trim();
+            const expiresAt = cells[4].textContent.trim();
+            const activationCode = cells[5].querySelector('.code-display') ? cells[5].querySelector('.code-display').textContent : '-';
+            const lastLogin = cells[6].textContent.trim();
+            const status = cells[7].textContent.trim();
+            
+            csvContent += `${index + 1},"${name}","${email}","${proType}","${activatedAt}","${expiresAt}","${activationCode}","${lastLogin}","${status}"\n`;
+        }
+    });
+    
+    // 下载CSV文件
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mozibang_pro_users_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    showToast('用户数据已导出', 'success');
+}
+
+// 显示提示消息
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+// 创建提示容器
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+    return container;
+}
+</script>
+{% endblock %}

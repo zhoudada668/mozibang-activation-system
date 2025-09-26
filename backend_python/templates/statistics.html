@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}统计报表 - MoziBang 管理后台{% endblock %}
+{% block page_title %}统计报表{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> 激活码统计概览</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for stat in activation_overview %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-left-primary">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            {{ stat.code_type }}
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            {{ stat.used }}/{{ stat.total }}
+                                        </div>
+                                        <div class="text-xs text-muted">
+                                            使用率: {{ "%.1f"|format(stat.usage_rate) }}%
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="progress" style="width: 60px; height: 60px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                 style="width: {{ stat.usage_rate }}%"
+                                                 aria-valuenow="{{ stat.usage_rate }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-people"></i> 用户统计</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>类型</th>
+                                <th>总数</th>
+                                <th>活跃</th>
+                                <th>永久</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in user_stats %}
+                            <tr>
+                                <td><span class="badge badge-info">{{ stat.pro_type }}</span></td>
+                                <td>{{ stat.total }}</td>
+                                <td>{{ stat.active }}</td>
+                                <td>{{ stat.lifetime }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-currency-dollar"></i> 收入估算</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>类型</th>
+                                <th>数量</th>
+                                <th>单价</th>
+                                <th>小计</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for revenue in revenue_estimation %}
+                            <tr>
+                                <td><span class="badge badge-success">{{ revenue.pro_type }}</span></td>
+                                <td>{{ revenue.count }}</td>
+                                <td>¥{{ revenue.unit_price }}</td>
+                                <td>¥{{ revenue.subtotal }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-warning">
+                                <td colspan="3"><strong>总计估算收入</strong></td>
+                                <td><strong>¥{{ total_revenue }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> 最近7天激活趋势</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>激活次数</th>
+                                <th>新用户数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trend in daily_trends %}
+                            <tr>
+                                <td>{{ trend.date }}</td>
+                                <td><span class="badge badge-primary">{{ trend.activations }}</span></td>
+                                <td><span class="badge badge-success">{{ trend.users }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-person-check"></i> 最近激活用户</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>邮箱</th>
+                                <th>类型</th>
+                                <th>激活时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>{{ user.user_email }}</td>
+                                <td><span class="badge badge-info">{{ user.pro_type }}</span></td>
+                                <td>{{ user.activated_at }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> 即将过期用户</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>邮箱</th>
+                                <th>类型</th>
+                                <th>剩余天数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in expiring_users %}
+                            <tr>
+                                <td>{{ user.user_email }}</td>
+                                <td><span class="badge badge-warning">{{ user.pro_type }}</span></td>
+                                <td>
+                                    {% if user.days_until_expiry <= 7 %}
+                                        <span class="badge badge-danger">{{ user.days_until_expiry }} 天</span>
+                                    {% elif user.days_until_expiry <= 30 %}
+                                        <span class="badge badge-warning">{{ user.days_until_expiry }} 天</span>
+                                    {% else %}
+                                        <span class="badge badge-info">{{ user.days_until_expiry }} 天</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-download"></i> 导出报告</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">导出详细的统计报告到JSON文件</p>
+                <button class="btn btn-primary" onclick="exportReport()">
+                    <i class="bi bi-file-earmark-arrow-down"></i> 导出完整报告
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportReport() {
+    fetch('/api/export-report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('报告导出成功！文件路径：' + data.filepath);
+        } else {
+            alert('导出失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('导出失败：' + error.message);
+    });
+}
+</script>
+{% endblock %}
