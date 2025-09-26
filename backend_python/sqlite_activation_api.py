@@ -5,15 +5,15 @@ MoziBang 激活码验证API + 管理后台 - SQLite版本
 提供激活码验证、Pro状态管理、管理后台等功能
 """
 
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
+from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for
 from flask_cors import CORS
 import sqlite3
 import hashlib
 import secrets
-import string
-from datetime import datetime, timedelta
+import datetime
+from datetime import timedelta
 import os
-from functools import wraps
+import logging
 
 app = Flask(__name__)
 
@@ -161,7 +161,7 @@ def activate_code():
         # 检查激活码是否存在且可用
         cursor.execute("""
             SELECT * FROM activation_codes 
-            WHERE code = ? AND is_used = 0 AND is_disabled = 0
+            WHERE code = ? AND status = 'active'
         """, (activation_code,))
         code_record = cursor.fetchone()
         
@@ -174,10 +174,10 @@ def activate_code():
             }), 400
         
         # 检查用户是否已经是Pro用户
-        cursor.execute("SELECT * FROM pro_users WHERE user_email = ?", (user_email,))
+        cursor.execute("SELECT * FROM users WHERE email = ?", (user_email,))
         existing_user = cursor.fetchone()
         
-        if existing_user and existing_user['is_active']:
+        if existing_user and existing_user[2] == 'active':  # pro_status字段
             conn.close()
             return jsonify({
                 'success': False,
@@ -189,12 +189,15 @@ def activate_code():
         expires_at = None
         is_lifetime = False
         
-        if code_record['code_type'] == 'pro_lifetime':
+        if code_record[1] == 'pro_lifetime':  # type字段
             is_lifetime = True
-        elif code_record['code_type'] == 'pro_1year':
-            expires_at = (datetime.datetime.now() + datetime.timedelta(days=365)).isoformat()
-        elif code_record['code_type'] == 'pro_6month':
-            expires_at = (datetime.datetime.now() + datetime.timedelta(days=180)).isoformat()
+        elif code_record[1] == 'pro_1year':
+            expires_at = (datetime.datetime.now() + timedelta(days=365)).isoformat()
+        elif code_record[1] == 'pro_6month':
+            expires_at = (datetime.datetime.now() + timedelta(days=180)).isoformat()
+        else:
+            # 默认为1年
+            expires_at = (datetime.datetime.now() + timedelta(days=365)).isoformat()
         
         # 生成用户令牌
         user_token = generate_user_token(user_email)
@@ -204,40 +207,39 @@ def activate_code():
             # 标记激活码为已使用
             cursor.execute("""
                 UPDATE activation_codes 
-                SET is_used = 1, used_at = CURRENT_TIMESTAMP, used_by_email = ?, used_by_name = ?
+                SET status = 'used', user_email = ?, activated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                 WHERE code = ?
-            """, (user_email, user_name, activation_code))
+            """, (user_email, activation_code))
             
-            # 添加或更新Pro用户记录
+            # 添加或更新用户记录
             if existing_user:
                 cursor.execute("""
-                    UPDATE pro_users 
-                    SET pro_type = ?, activation_code = ?, activated_at = CURRENT_TIMESTAMP,
-                        expires_at = ?, is_lifetime = ?, is_active = 1, user_token = ?,
-                        revoked_at = NULL, revoked_reason = NULL, updated_at = CURRENT_TIMESTAMP
-                    WHERE user_email = ?
-                """, (code_record['code_type'], activation_code, expires_at, is_lifetime, user_token, user_email))
+                    UPDATE users 
+                    SET pro_status = 'active', pro_activated_at = CURRENT_TIMESTAMP,
+                        pro_expires_at = ?, activation_code = ?, token = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE email = ?
+                """, (expires_at, activation_code, user_token, user_email))
             else:
                 cursor.execute("""
-                    INSERT INTO pro_users 
-                    (user_email, user_name, pro_type, activation_code, expires_at, is_lifetime, user_token)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (user_email, user_name, code_record['code_type'], activation_code, expires_at, is_lifetime, user_token))
+                    INSERT INTO users 
+                    (email, token, pro_status, pro_activated_at, pro_expires_at, activation_code)
+                    VALUES (?, ?, 'active', CURRENT_TIMESTAMP, ?, ?)
+                """, (user_email, user_token, expires_at, activation_code))
             
             conn.commit()
             
-            logger.info(f"Activation successful: {user_email} -> {activation_code}")
+            print(f"Activation successful: {user_email} -> {activation_code}")
             
             return jsonify({
                 'success': True,
                 'message': 'Activation successful',
                 'data': {
                     'user_email': user_email,
-                    'pro_type': code_record['code_type'],
+                    'pro_type': code_record[1],  # type字段
                     'is_lifetime': is_lifetime,
                     'expires_at': expires_at,
                     'user_token': user_token,
-                    'activated_at': datetime.datetime.now().isoformat()
+                    'activated_at': datetime.now().isoformat()
                 }
             })
             
