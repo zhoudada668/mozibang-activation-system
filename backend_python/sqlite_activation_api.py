@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MoziBang 激活码验证API - SQLite版本
-提供激活码验证、Pro状态管理等功能
+MoziBang 激活码验证API + 管理后台 - SQLite版本
+提供激活码验证、Pro状态管理、管理后台等功能
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from flask_cors import CORS
 import sqlite3
 import hashlib
@@ -29,6 +29,20 @@ else:
 
 # SQLite数据库文件路径
 DB_PATH = os.path.join(os.path.dirname(__file__), 'mozibang_activation.db')
+
+# 管理员账户配置
+ADMIN_USERS = {
+    'admin': 'admin123'
+}
+
+def login_required(f):
+    """登录验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_user' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def init_database():
     """初始化数据库表"""
@@ -411,16 +425,16 @@ def revoke_pro_status():
         cursor = conn.cursor()
         
         cursor.execute("""
-            UPDATE pro_users 
-            SET is_active = 0, revoked_at = CURRENT_TIMESTAMP, revoked_reason = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE user_email = ? AND is_active = 1
-        """, (reason, user_email))
+            UPDATE users 
+            SET pro_status = 'inactive', updated_at = CURRENT_TIMESTAMP
+            WHERE email = ? AND pro_status = 'active'
+        """, (user_email,))
         
         if cursor.rowcount > 0:
             conn.commit()
             conn.close()
             
-            logger.info(f"Pro status revoked: {user_email}")
+            print(f"Pro status revoked: {user_email}")
             
             return jsonify({
                 'success': True,
@@ -435,7 +449,7 @@ def revoke_pro_status():
             }), 404
             
     except Exception as e:
-        logger.error(f"Revoke error: {str(e)}")
+        print(f"Revoke error: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Internal server error',
@@ -490,3 +504,208 @@ if __name__ == '__main__':
         print("🌐 生产环境模式")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
+
+# 管理后台路由
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    """管理后台仪表板"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 获取统计数据
+        stats = {}
+        
+        # 激活码统计
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'used' THEN 1 ELSE 0 END) as used,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as unused
+            FROM activation_codes
+        """)
+        code_result = cursor.fetchone()
+        stats['total_codes'] = code_result[0] if code_result else 0
+        stats['used_codes'] = code_result[1] if code_result else 0
+        stats['unused_codes'] = code_result[2] if code_result else 0
+        
+        # Pro用户统计
+        cursor.execute("SELECT COUNT(*) FROM users WHERE pro_status = 'active'")
+        pro_users_result = cursor.fetchone()
+        stats['pro_users'] = pro_users_result[0] if pro_users_result else 0
+        
+        # 激活码分类统计
+        cursor.execute("""
+            SELECT 
+                type,
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'used' THEN 1 ELSE 0 END) as used,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as available
+            FROM activation_codes 
+            GROUP BY type
+        """)
+        code_stats = cursor.fetchall()
+        
+        # 最近激活记录
+        cursor.execute("""
+            SELECT email, pro_status, pro_activated_at 
+            FROM users 
+            WHERE pro_activated_at IS NOT NULL
+            ORDER BY pro_activated_at DESC 
+            LIMIT 10
+        """)
+        recent_activations = cursor.fetchall()
+        
+        conn.close()
+        
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>MoziBang 管理后台</title>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                .header {{ background: #007cba; color: white; padding: 20px; margin: -20px -20px 20px -20px; }}
+                .stats {{ display: flex; gap: 20px; margin: 20px 0; }}
+                .stat-card {{ background: #f5f5f5; padding: 20px; border-radius: 8px; flex: 1; }}
+                .stat-number {{ font-size: 2em; font-weight: bold; color: #007cba; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+                th {{ background-color: #f2f2f2; }}
+                .logout {{ float: right; color: white; text-decoration: none; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>MoziBang 激活码管理后台</h1>
+                <a href="/admin/logout" class="logout">退出登录</a>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">{stats['total_codes']}</div>
+                    <div>总激活码数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['used_codes']}</div>
+                    <div>已使用</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['unused_codes']}</div>
+                    <div>未使用</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['pro_users']}</div>
+                    <div>Pro用户</div>
+                </div>
+            </div>
+            
+            <h2>激活码分类统计</h2>
+            <table>
+                <tr><th>类型</th><th>总数</th><th>已使用</th><th>可用</th></tr>
+                {''.join(f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td></tr>' for row in code_stats)}
+            </table>
+            
+            <h2>最近激活记录</h2>
+            <table>
+                <tr><th>用户邮箱</th><th>Pro状态</th><th>激活时间</th></tr>
+                {''.join(f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2] or "未激活"}</td></tr>' for row in recent_activations)}
+            </table>
+        </body>
+        </html>
+        """
+        
+    except Exception as e:
+        return f"<h1>错误</h1><p>获取统计数据失败: {str(e)}</p>"
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """管理员登录"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username in ADMIN_USERS and ADMIN_USERS[username] == password:
+            session['admin_user'] = username
+            return redirect(url_for('admin_dashboard'))
+        else:
+            error = "用户名或密码错误"
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>管理员登录</title>
+                <meta charset="utf-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }}
+                    .login-form {{ background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 300px; }}
+                    .form-group {{ margin: 20px 0; }}
+                    label {{ display: block; margin-bottom: 5px; }}
+                    input {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }}
+                    button {{ width: 100%; padding: 12px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }}
+                    button:hover {{ background: #005a8b; }}
+                    .error {{ color: red; margin: 10px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="login-form">
+                    <h2>MoziBang 管理后台</h2>
+                    <div class="error">{error}</div>
+                    <form method="post">
+                        <div class="form-group">
+                            <label>用户名:</label>
+                            <input type="text" name="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>密码:</label>
+                            <input type="password" name="password" required>
+                        </div>
+                        <button type="submit">登录</button>
+                    </form>
+                </div>
+            </body>
+            </html>
+            """
+    
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>管理员登录</title>
+        <meta charset="utf-8">
+        <style>
+            body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+            .login-form { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 300px; }
+            .form-group { margin: 20px 0; }
+            label { display: block; margin-bottom: 5px; }
+            input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            button { width: 100%; padding: 12px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+            button:hover { background: #005a8b; }
+        </style>
+    </head>
+    <body>
+        <div class="login-form">
+            <h2>MoziBang 管理后台</h2>
+            <form method="post">
+                <div class="form-group">
+                    <label>用户名:</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>密码:</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit">登录</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.route('/admin/logout')
+def admin_logout():
+    """管理员登出"""
+    session.pop('admin_user', None)
+    return redirect(url_for('admin_login'))
