@@ -676,6 +676,124 @@ def admin_logout():
     session.pop('admin_user', None)
     return redirect(url_for('admin_login'))
 
+@app.route('/admin/codes')
+@login_required
+def codes():
+    """激活码管理"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 获取查询参数
+        page = int(request.args.get('page', 1))
+        per_page = 20
+        code_type = request.args.get('type', '')
+        status = request.args.get('status', '')
+        
+        # 构建查询条件
+        where_conditions = []
+        params = []
+        
+        if code_type:
+            where_conditions.append("code_type = ?")
+            params.append(code_type)
+        
+        if status == 'used':
+            where_conditions.append("is_used = 1")
+        elif status == 'available':
+            where_conditions.append("is_used = 0 AND is_disabled = 0")
+        elif status == 'disabled':
+            where_conditions.append("is_disabled = 1")
+        
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        # 获取总数
+        cursor.execute(f"SELECT COUNT(*) FROM activation_codes{where_clause}", params)
+        total = cursor.fetchone()[0]
+        
+        # 获取分页数据
+        offset = (page - 1) * per_page
+        cursor.execute(f"""
+            SELECT * FROM activation_codes{where_clause} 
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        """, params + [per_page, offset])
+        codes = cursor.fetchall()
+        
+        conn.close()
+        
+        # 计算分页信息
+        total_pages = (total + per_page - 1) // per_page
+        
+        return render_template('codes.html', 
+                             codes=codes,
+                             page=page,
+                             total_pages=total_pages,
+                             total=total,
+                             code_type=code_type,
+                             status=status)
+    except Exception as e:
+        flash(f'获取激活码列表失败: {str(e)}', 'error')
+        return render_template('codes.html', codes=[])
+
+@app.route('/admin/users')
+@login_required
+def users():
+    """用户管理"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 获取查询参数
+        page = int(request.args.get('page', 1))
+        per_page = 20
+        pro_type = request.args.get('pro_type', '')
+        status = request.args.get('status', '')
+        
+        # 构建查询条件
+        where_conditions = []
+        params = []
+        
+        if pro_type:
+            where_conditions.append("pro_type = ?")
+            params.append(pro_type)
+        
+        if status == 'active':
+            where_conditions.append("is_active = 1")
+        elif status == 'inactive':
+            where_conditions.append("is_active = 0")
+        
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        # 获取总数
+        cursor.execute(f"SELECT COUNT(*) FROM pro_users{where_clause}", params)
+        total = cursor.fetchone()[0]
+        
+        # 获取分页数据
+        offset = (page - 1) * per_page
+        cursor.execute(f"""
+            SELECT * FROM pro_users{where_clause} 
+            ORDER BY activated_at DESC 
+            LIMIT ? OFFSET ?
+        """, params + [per_page, offset])
+        users = cursor.fetchall()
+        
+        conn.close()
+        
+        # 计算分页信息
+        total_pages = (total + per_page - 1) // per_page
+        
+        return render_template('users_list.html', 
+                             users=users,
+                             page=page,
+                             total_pages=total_pages,
+                             total=total,
+                             pro_type=pro_type,
+                             status=status)
+    except Exception as e:
+        flash(f'获取用户列表失败: {str(e)}', 'error')
+        return render_template('users_list.html', users=[])
+
 @app.route('/admin/generate', methods=['GET', 'POST'])
 @login_required
 def admin_generate():
