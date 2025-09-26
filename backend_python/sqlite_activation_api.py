@@ -50,17 +50,20 @@ def init_database():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # 创建激活码表
+    # 创建激活码表 - 使用与代码匹配的字段名
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS activation_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE NOT NULL,
-            type TEXT NOT NULL DEFAULT 'pro',
-            status TEXT NOT NULL DEFAULT 'active',
-            user_email TEXT,
-            user_token TEXT,
-            activated_at DATETIME,
-            expires_at DATETIME,
+            code_type TEXT NOT NULL DEFAULT 'pro_lifetime',
+            batch_name TEXT DEFAULT NULL,
+            notes TEXT DEFAULT NULL,
+            is_used BOOLEAN DEFAULT FALSE,
+            used_by TEXT DEFAULT NULL,
+            used_at DATETIME DEFAULT NULL,
+            is_disabled BOOLEAN DEFAULT FALSE,
+            disabled_at DATETIME DEFAULT NULL,
+            disabled_reason TEXT DEFAULT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -81,18 +84,24 @@ def init_database():
         )
     ''')
     
+    # 创建索引
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_code_type ON activation_codes(code_type)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_batch_name ON activation_codes(batch_name)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_is_used ON activation_codes(is_used)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_is_disabled ON activation_codes(is_disabled)')
+    
     # 插入一些测试激活码
     test_codes = [
-        ('MOZIBANG-PRO-2024', 'pro', 'active'),
-        ('TEST-CODE-123', 'pro', 'active'),
-        ('DEMO-ACTIVATION', 'pro', 'active')
+        ('MOZIBANG-PRO-2024', 'pro_lifetime', 'TEST-BATCH-001'),
+        ('TEST-CODE-123', 'pro_1year', 'TEST-BATCH-001'),
+        ('DEMO-ACTIVATION', 'pro_6month', 'TEST-BATCH-001')
     ]
     
-    for code, code_type, status in test_codes:
+    for code, code_type, batch_name in test_codes:
         cursor.execute('''
-            INSERT OR IGNORE INTO activation_codes (code, type, status)
-            VALUES (?, ?, ?)
-        ''', (code, code_type, status))
+            INSERT OR IGNORE INTO activation_codes (code, code_type, batch_name, notes)
+            VALUES (?, ?, ?, ?)
+        ''', (code, code_type, batch_name, '测试激活码'))
     
     conn.commit()
     conn.close()
