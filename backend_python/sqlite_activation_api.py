@@ -14,6 +14,7 @@ import datetime
 from datetime import timedelta
 import os
 import logging
+from functools import wraps
 
 app = Flask(__name__)
 
@@ -119,14 +120,14 @@ def verify_api_key(f):
 
 def generate_user_token(user_email):
     """生成用户令牌"""
-    return hashlib.sha256(f"{user_email}_{datetime.now().isoformat()}".encode()).hexdigest()
+    return hashlib.sha256(f"{user_email}_{datetime.datetime.now().isoformat()}".encode()).hexdigest()
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """健康检查"""
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
+        'timestamp': datetime.datetime.now().isoformat(),
         'database': 'sqlite',
         'database_file': DB_PATH
     })
@@ -239,7 +240,7 @@ def activate_code():
                     'is_lifetime': is_lifetime,
                     'expires_at': expires_at,
                     'user_token': user_token,
-                    'activated_at': datetime.now().isoformat()
+                    'activated_at': datetime.datetime.now().isoformat()
                 }
             })
             
@@ -286,8 +287,8 @@ def verify_pro_status():
         
         # 查询用户Pro状态
         cursor.execute("""
-            SELECT * FROM pro_users 
-            WHERE user_email = ? AND is_active = 1
+            SELECT * FROM users 
+            WHERE email = ? AND pro_status = 'active'
         """, (user_email,))
         user_record = cursor.fetchone()
         
@@ -302,16 +303,16 @@ def verify_pro_status():
         
         # 检查是否过期（如果不是终身版）
         is_expired = False
-        if not user_record['is_lifetime'] and user_record['expires_at']:
-            expires_at = datetime.datetime.fromisoformat(user_record['expires_at'])
+        if user_record['pro_expires_at']:
+            expires_at = datetime.datetime.fromisoformat(user_record['pro_expires_at'])
             if expires_at < datetime.datetime.now():
                 is_expired = True
         
         # 更新最后登录时间
         cursor.execute("""
-            UPDATE pro_users 
-            SET last_login = CURRENT_TIMESTAMP 
-            WHERE user_email = ?
+            UPDATE users 
+            SET updated_at = CURRENT_TIMESTAMP 
+            WHERE email = ?
         """, (user_email,))
         conn.commit()
         conn.close()
@@ -321,10 +322,10 @@ def verify_pro_status():
             'message': 'Pro status verified',
             'data': {
                 'is_pro': not is_expired,
-                'pro_type': user_record['pro_type'],
-                'is_lifetime': bool(user_record['is_lifetime']),
-                'expires_at': user_record['expires_at'],
-                'activated_at': user_record['activated_at'],
+                'pro_type': 'pro',
+                'is_lifetime': user_record['pro_expires_at'] is None,
+                'expires_at': user_record['pro_expires_at'],
+                'activated_at': user_record['pro_activated_at'],
                 'is_expired': is_expired,
                 'last_login': datetime.datetime.now().isoformat()
             }
@@ -349,25 +350,23 @@ def get_stats():
         # 激活码统计
         cursor.execute("""
             SELECT 
-                code_type,
+                type,
                 COUNT(*) as total,
-                SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END) as used,
-                SUM(CASE WHEN is_used = 0 AND is_disabled = 0 THEN 1 ELSE 0 END) as available,
-                SUM(CASE WHEN is_disabled = 1 THEN 1 ELSE 0 END) as disabled
+                SUM(CASE WHEN status = 'used' THEN 1 ELSE 0 END) as used,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as available
             FROM activation_codes 
-            GROUP BY code_type
+            GROUP BY type
         """)
         code_stats = [dict(row) for row in cursor.fetchall()]
         
         # Pro用户统计
         cursor.execute("""
             SELECT 
-                pro_type,
+                'pro' as pro_type,
                 COUNT(*) as total,
-                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as inactive
-            FROM pro_users 
-            GROUP BY pro_type
+                SUM(CASE WHEN pro_status = 'active' THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN pro_status = 'inactive' THEN 1 ELSE 0 END) as inactive
+            FROM users 
         """)
         user_stats = [dict(row) for row in cursor.fetchall()]
         
@@ -375,7 +374,7 @@ def get_stats():
         cursor.execute("SELECT COUNT(*) as total FROM activation_codes")
         total_codes = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) as total FROM pro_users WHERE is_active = 1")
+        cursor.execute("SELECT COUNT(*) as total FROM users WHERE pro_status = 'active'")
         total_active_users = cursor.fetchone()[0]
         
         conn.close()
