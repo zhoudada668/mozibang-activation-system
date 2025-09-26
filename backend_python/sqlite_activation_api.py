@@ -487,24 +487,6 @@ if __name__ == '__main__':
     # 初始化数据库
     init_database()
     
-    # 根据环境配置端口和调试模式
-    port = int(os.environ.get('PORT', 5001))
-    debug = os.environ.get('FLASK_ENV') != 'production'
-    
-    if debug:
-        print("🔌 API地址: http://localhost:5001/api")
-        print(f"🔑 API密钥: {API_SECRET_KEY}")
-        print("\n📋 可用的API端点:")
-        print("  GET  /api/health - 健康检查")
-        print("  POST /api/activate - 激活码验证")
-        print("  POST /api/verify_pro - 验证Pro状态")
-        print("  GET  /api/stats - 获取统计信息")
-        print("  POST /api/revoke_pro - 撤销Pro状态")
-    else:
-        print("🌐 生产环境模式")
-    
-    app.run(host='0.0.0.0', port=port, debug=debug)
-
 # 管理后台路由
 @app.route('/admin')
 @login_required
@@ -709,3 +691,28 @@ def admin_logout():
     """管理员登出"""
     session.pop('admin_user', None)
     return redirect(url_for('admin_login'))
+
+if __name__ == '__main__':
+    # 初始化数据库
+    init_database()
+    
+    # 根据环境配置端口和调试模式
+    port = int(os.environ.get('PORT', 5001))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    
+    if debug:
+        print("🔌 API地址: http://localhost:5001/api")
+        print(f"🔑 API密钥: {API_SECRET_KEY}")
+        print("\n📋 可用的API端点:")
+        print("  GET  /api/health - 健康检查")
+        print("  POST /api/activate - 激活码验证")
+        print("  POST /api/verify_pro - 验证Pro状态")
+        print("  GET  /api/stats - 获取统计信息")
+        print("  POST /api/revoke_pro - 撤销Pro状态")
+        print("\n🔧 管理后台:")
+        print("  GET  /admin - 管理仪表板")
+        print("  GET  /admin/login - 管理员登录")
+    else:
+        print("🌐 生产环境模式")
+    
+    app.run(host='0.0.0.0', port=port, debug=debug)
