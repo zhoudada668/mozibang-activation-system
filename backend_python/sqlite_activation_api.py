@@ -248,7 +248,7 @@ def activate_code():
             raise e
             
     except Exception as e:
-        logger.error(f"Activation error: {str(e)}")
+        print(f"Activation error: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Internal server error',
@@ -331,7 +331,7 @@ def verify_pro_status():
         })
         
     except Exception as e:
-        logger.error(f"Pro status verification error: {str(e)}")
+        print(f"Pro status verification error: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Internal server error',
@@ -393,7 +393,7 @@ def get_stats():
         })
         
     except Exception as e:
-        logger.error(f"Stats error: {str(e)}")
+        print(f"Stats error: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Internal server error',
