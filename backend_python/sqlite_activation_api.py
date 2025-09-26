@@ -136,7 +136,7 @@ def health_check():
     """健康检查"""
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.datetime.now().isoformat(),
+        'timestamp': datetime.now().isoformat(),
         'database': 'sqlite',
         'database_file': DB_PATH
     })
@@ -202,12 +202,12 @@ def activate_code():
         if code_record[1] == 'pro_lifetime':  # type字段
             is_lifetime = True
         elif code_record[1] == 'pro_1year':
-            expires_at = (datetime.datetime.now() + timedelta(days=365)).isoformat()
+            expires_at = (datetime.now() + timedelta(days=365)).isoformat()
         elif code_record[1] == 'pro_6month':
-            expires_at = (datetime.datetime.now() + timedelta(days=180)).isoformat()
+            expires_at = (datetime.now() + timedelta(days=180)).isoformat()
         else:
             # 默认为1年
-            expires_at = (datetime.datetime.now() + timedelta(days=365)).isoformat()
+            expires_at = (datetime.now() + timedelta(days=365)).isoformat()
         
         # 生成用户令牌
         user_token = generate_user_token(user_email)
@@ -249,7 +249,7 @@ def activate_code():
                     'is_lifetime': is_lifetime,
                     'expires_at': expires_at,
                     'user_token': user_token,
-                    'activated_at': datetime.datetime.now().isoformat()
+                    'activated_at': datetime.now().isoformat()
                 }
             })
             
@@ -313,8 +313,8 @@ def verify_pro_status():
         # 检查是否过期（如果不是终身版）
         is_expired = False
         if user_record['pro_expires_at']:
-            expires_at = datetime.datetime.fromisoformat(user_record['pro_expires_at'])
-            if expires_at < datetime.datetime.now():
+            expires_at = datetime.fromisoformat(user_record['pro_expires_at'])
+        if expires_at < datetime.now():
                 is_expired = True
         
         # 更新最后登录时间
@@ -336,7 +336,7 @@ def verify_pro_status():
                 'expires_at': user_record['pro_expires_at'],
                 'activated_at': user_record['pro_activated_at'],
                 'is_expired': is_expired,
-                'last_login': datetime.datetime.now().isoformat()
+                'last_login': datetime.now().isoformat()
             }
         })
         
