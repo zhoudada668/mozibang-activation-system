@@ -30,6 +30,59 @@ else:
 # SQLite数据库文件路径
 DB_PATH = os.path.join(os.path.dirname(__file__), 'mozibang_activation.db')
 
+def init_database():
+    """初始化数据库表"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # 创建激活码表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS activation_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            type TEXT NOT NULL DEFAULT 'pro',
+            status TEXT NOT NULL DEFAULT 'active',
+            user_email TEXT,
+            user_token TEXT,
+            activated_at DATETIME,
+            expires_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 创建用户表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            pro_status TEXT NOT NULL DEFAULT 'inactive',
+            pro_activated_at DATETIME,
+            pro_expires_at DATETIME,
+            activation_code TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 插入一些测试激活码
+    test_codes = [
+        ('MOZIBANG-PRO-2024', 'pro', 'active'),
+        ('TEST-CODE-123', 'pro', 'active'),
+        ('DEMO-ACTIVATION', 'pro', 'active')
+    ]
+    
+    for code, code_type, status in test_codes:
+        cursor.execute('''
+            INSERT OR IGNORE INTO activation_codes (code, type, status)
+            VALUES (?, ?, ?)
+        ''', (code, code_type, status))
+    
+    conn.commit()
+    conn.close()
+    print("✅ 数据库初始化完成")
+
 def get_db_connection():
     """获取数据库连接"""
     conn = sqlite3.connect(DB_PATH)
@@ -52,7 +105,7 @@ def verify_api_key(f):
 
 def generate_user_token(user_email):
     """生成用户令牌"""
-    return hashlib.sha256(f"{user_email}_{datetime.datetime.now().isoformat()}".encode()).hexdigest()
+    return hashlib.sha256(f"{user_email}_{datetime.now().isoformat()}".encode()).hexdigest()
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -416,6 +469,9 @@ def internal_error(error):
 if __name__ == '__main__':
     print("🚀 启动 MoziBang 激活码验证API (SQLite版本)")
     print(f"📁 数据库文件: {DB_PATH}")
+    
+    # 初始化数据库
+    init_database()
     
     # 根据环境配置端口和调试模式
     port = int(os.environ.get('PORT', 5001))
