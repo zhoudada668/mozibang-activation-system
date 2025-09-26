@@ -59,7 +59,7 @@ def health_check():
     """健康检查"""
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.datetime.now().isoformat(),
+        'timestamp': datetime.now().isoformat(),
         'database': 'sqlite',
         'database_file': DB_PATH
     })

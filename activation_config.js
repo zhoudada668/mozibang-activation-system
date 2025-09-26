@@ -10,6 +10,12 @@ window.ActivationConfig = {
   
   // 生产环境配置 - 部署后需要更新
   production: {
+    // Render 部署 - 当前使用
+    render: {
+      API_BASE_URL: 'https://mozibang-activation-api.onrender.com/api',
+      API_KEY: 'mozibang_api_secret_2024'
+    },
+    
     // Railway 部署示例
     railway: {
       API_BASE_URL: 'https://your-app-name.up.railway.app/api',
@@ -28,7 +34,7 @@ window.ActivationConfig = {
       API_KEY: 'your_production_api_key'
     },
     
-    // 自定义域名示例
+    // 自定义域名
     custom: {
       API_BASE_URL: 'https://api.yourdomain.com/api',
       API_KEY: 'your_production_api_key'
@@ -44,7 +50,7 @@ window.ActivationConfig = {
     if (isProduction) {
       // 生产环境 - 根据需要选择部署平台
       // 部署后请修改这里选择正确的配置
-      return this.production.railway; // 默认使用Railway配置
+      return this.production.render; // 当前使用Render配置
     } else {
       // 开发环境
       return this.development;
