@@ -5,16 +5,16 @@ MoziBang 激活码验证API + 管理后台 - SQLite版本
 提供激活码验证、Pro状态管理、管理后台等功能
 """
 
-from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for
-from flask_cors import CORS
 import sqlite3
 import hashlib
 import secrets
-import datetime
-from datetime import timedelta
+import string
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
+from flask_cors import CORS
 import os
 import logging
-from functools import wraps
 
 app = Flask(__name__)
 
@@ -120,7 +120,16 @@ def verify_api_key(f):
 
 def generate_user_token(user_email):
     """生成用户令牌"""
-    return hashlib.sha256(f"{user_email}_{datetime.datetime.now().isoformat()}".encode()).hexdigest()
+    return hashlib.sha256(f"{user_email}_{datetime.now().isoformat()}".encode()).hexdigest()
+
+def generate_activation_code():
+    """生成激活码"""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(16))
+
+def generate_batch_id():
+    """生成批次ID"""
+    return f"BATCH_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -692,6 +701,47 @@ def admin_logout():
     """管理员登出"""
     session.pop('admin_user', None)
     return redirect(url_for('admin_login'))
+
+@app.route('/admin/generate', methods=['GET', 'POST'])
+@login_required
+def admin_generate():
+    """生成激活码"""
+    if request.method == 'POST':
+        try:
+            code_type = request.form.get('code_type')
+            count = int(request.form.get('count', 1))
+            batch_name = request.form.get('batch_name', '')
+            notes = request.form.get('notes', '')
+            
+            if not code_type or count <= 0 or count > 1000:
+                flash('参数错误', 'error')
+                return render_template('generate.html')
+            
+            if not batch_name:
+                batch_name = generate_batch_id()
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            generated_codes = []
+            for _ in range(count):
+                code = generate_activation_code()
+                cursor.execute("""
+                    INSERT INTO activation_codes (code, code_type, batch_name, notes)
+                    VALUES (?, ?, ?, ?)
+                """, (code, code_type, batch_name, notes))
+                generated_codes.append(code)
+            
+            conn.commit()
+            conn.close()
+            
+            flash(f'成功生成 {count} 个激活码', 'success')
+            return render_template('generate.html', generated_codes=generated_codes)
+            
+        except Exception as e:
+            flash(f'生成激活码失败: {str(e)}', 'error')
+    
+    return render_template('generate.html')
 
 if __name__ == '__main__':
     # 初始化数据库
