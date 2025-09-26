@@ -314,7 +314,7 @@ def verify_pro_status():
         is_expired = False
         if user_record['pro_expires_at']:
             expires_at = datetime.fromisoformat(user_record['pro_expires_at'])
-        if expires_at < datetime.now():
+            if expires_at < datetime.now():
                 is_expired = True
         
         # 更新最后登录时间
