@@ -574,9 +574,15 @@ def admin_redirect():
     """重定向到管理员登录页面"""
     return redirect(url_for('admin_login'))
 
+@app.route('/')
+def index():
+    """根路径重定向到管理后台"""
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin')
 @app.route('/admin/dashboard')
 @login_required
-def dashboard():
+def admin_dashboard():
     """仪表板"""
     try:
         conn = get_db_connection()
