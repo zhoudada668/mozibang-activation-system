@@ -490,6 +490,68 @@ def internal_error(error):
         'error_code': 'INTERNAL_ERROR'
     }), 500
 
+@app.route('/admin/statistics')
+@login_required
+def statistics():
+    """统计报表页面"""
+    try:
+        # 导入统计模块
+        import sys
+        sys.path.append(os.path.dirname(__file__))
+        from statistics_report import ActivationStatistics
+        
+        stats = ActivationStatistics()
+        
+        # 获取各种统计数据
+        activation_overview = stats.get_activation_overview()
+        user_stats = stats.get_user_statistics()
+        daily_trends = stats.get_daily_activation_trends()
+        revenue_estimation = stats.get_revenue_estimation()
+        
+        # 计算总收入
+        total_revenue = sum(item['subtotal'] for item in revenue_estimation)
+        
+        # 获取最近激活用户
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT user_email, pro_type, activated_at 
+            FROM pro_users 
+            ORDER BY activated_at DESC 
+            LIMIT 10
+        """)
+        recent_users = cursor.fetchall()
+        
+        # 获取即将过期用户
+        cursor.execute("""
+            SELECT 
+                user_email,
+                pro_type,
+                expires_at,
+                CAST((julianday(expires_at) - julianday('now')) AS INTEGER) as days_until_expiry
+            FROM pro_users 
+            WHERE expires_at IS NOT NULL 
+                AND expires_at > datetime('now')
+                AND is_active = 1
+            ORDER BY expires_at ASC
+            LIMIT 10
+        """)
+        expiring_users = cursor.fetchall()
+        
+        conn.close()
+        
+        return render_template('statistics.html',
+                             activation_overview=activation_overview,
+                             user_stats=user_stats,
+                             daily_trends=daily_trends,
+                             revenue_estimation=revenue_estimation,
+                             total_revenue=total_revenue,
+                             recent_users=recent_users,
+                             expiring_users=expiring_users)
+    except Exception as e:
+        flash(f'获取统计数据失败: {str(e)}', 'error')
+        return render_template('statistics.html')
+
 if __name__ == '__main__':
     print("🚀 启动 MoziBang 激活码验证API (SQLite版本)")
     print(f"📁 数据库文件: {DB_PATH}")
