@@ -12,3 +12,17 @@ services:
         generateValue: true
       - key: FLASK_ENV
         value: production
+  
+  - type: web
+    name: mozibang-admin-panel
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python sqlite_admin_app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.18
+      - key: PORT
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
