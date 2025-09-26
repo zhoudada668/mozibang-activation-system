@@ -499,9 +499,14 @@ if __name__ == '__main__':
     
 # 管理后台路由
 @app.route('/admin')
+def admin_redirect():
+    """重定向到管理员登录页面"""
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin/dashboard')
 @login_required
-def admin_dashboard():
-    """管理后台仪表板"""
+def dashboard():
+    """仪表板"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -513,8 +518,8 @@ def admin_dashboard():
         cursor.execute("""
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN status = 'used' THEN 1 ELSE 0 END) as used,
-                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as unused
+                SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END) as used,
+                SUM(CASE WHEN is_used = 0 AND is_disabled = 0 THEN 1 ELSE 0 END) as unused
             FROM activation_codes
         """)
         code_result = cursor.fetchone()
@@ -523,94 +528,63 @@ def admin_dashboard():
         stats['unused_codes'] = code_result[2] if code_result else 0
         
         # Pro用户统计
-        cursor.execute("SELECT COUNT(*) FROM users WHERE pro_status = 'active'")
+        cursor.execute("SELECT COUNT(*) FROM pro_users WHERE is_active = 1")
         pro_users_result = cursor.fetchone()
         stats['pro_users'] = pro_users_result[0] if pro_users_result else 0
         
         # 激活码分类统计
         cursor.execute("""
             SELECT 
-                type,
+                code_type,
                 COUNT(*) as total,
-                SUM(CASE WHEN status = 'used' THEN 1 ELSE 0 END) as used,
-                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as available
+                SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END) as used,
+                SUM(CASE WHEN is_used = 0 AND is_disabled = 0 THEN 1 ELSE 0 END) as available
             FROM activation_codes 
-            GROUP BY type
+            GROUP BY code_type
         """)
         code_stats = cursor.fetchall()
         
+        # Pro用户分类统计
+        cursor.execute("""
+            SELECT 
+                pro_type,
+                COUNT(*) as total,
+                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
+            FROM pro_users 
+            GROUP BY pro_type
+        """)
+        user_stats = cursor.fetchall()
+        
         # 最近激活记录
         cursor.execute("""
-            SELECT email, pro_status, pro_activated_at 
-            FROM users 
-            WHERE pro_activated_at IS NOT NULL
-            ORDER BY pro_activated_at DESC 
+            SELECT user_email, pro_type, activated_at 
+            FROM pro_users 
+            ORDER BY activated_at DESC 
             LIMIT 10
         """)
         recent_activations = cursor.fetchall()
         
         conn.close()
         
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>MoziBang 管理后台</title>
-            <meta charset="utf-8">
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                .header {{ background: #007cba; color: white; padding: 20px; margin: -20px -20px 20px -20px; }}
-                .stats {{ display: flex; gap: 20px; margin: 20px 0; }}
-                .stat-card {{ background: #f5f5f5; padding: 20px; border-radius: 8px; flex: 1; }}
-                .stat-number {{ font-size: 2em; font-weight: bold; color: #007cba; }}
-                table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
-                th {{ background-color: #f2f2f2; }}
-                .logout {{ float: right; color: white; text-decoration: none; }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>MoziBang 激活码管理后台</h1>
-                <a href="/admin/logout" class="logout">退出登录</a>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number">{stats['total_codes']}</div>
-                    <div>总激活码数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{stats['used_codes']}</div>
-                    <div>已使用</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{stats['unused_codes']}</div>
-                    <div>未使用</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{stats['pro_users']}</div>
-                    <div>Pro用户</div>
-                </div>
-            </div>
-            
-            <h2>激活码分类统计</h2>
-            <table>
-                <tr><th>类型</th><th>总数</th><th>已使用</th><th>可用</th></tr>
-                {''.join(f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td></tr>' for row in code_stats)}
-            </table>
-            
-            <h2>最近激活记录</h2>
-            <table>
-                <tr><th>用户邮箱</th><th>Pro状态</th><th>激活时间</th></tr>
-                {''.join(f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2] or "未激活"}</td></tr>' for row in recent_activations)}
-            </table>
-        </body>
-        </html>
-        """
-        
+        return render_template('dashboard.html', 
+                             stats=stats,
+                             code_stats=code_stats,
+                             user_stats=user_stats,
+                             recent_activations=recent_activations)
     except Exception as e:
-        return f"<h1>错误</h1><p>获取统计数据失败: {str(e)}</p>"
+        flash(f'获取统计数据失败: {str(e)}', 'error')
+        # 返回空的统计数据以避免模板错误
+        empty_stats = {
+            'total_codes': 0,
+            'used_codes': 0,
+            'unused_codes': 0,
+            'pro_users': 0
+        }
+        return render_template('dashboard.html', 
+                             stats=empty_stats,
+                             code_stats=[],
+                             user_stats=[],
+                             recent_activations=[])
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
