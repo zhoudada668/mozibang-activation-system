@@ -576,10 +576,9 @@ def admin_redirect():
 
 @app.route('/')
 def index():
-    """根路径重定向到管理后台"""
-    return redirect(url_for('admin_dashboard'))
+    """根路径重定向到管理员登录页面"""
+    return redirect(url_for('admin_login'))
 
-@app.route('/admin')
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
