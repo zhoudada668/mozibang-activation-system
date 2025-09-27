@@ -605,7 +605,7 @@ def admin_dashboard():
         stats['unused_codes'] = code_result[2] if code_result else 0
         
         # Pro用户统计
-        cursor.execute("SELECT COUNT(*) FROM pro_users WHERE is_active = 1")
+        cursor.execute("SELECT COUNT(*) FROM users WHERE pro_status = 'active'")
         pro_users_result = cursor.fetchone()
         stats['pro_users'] = pro_users_result[0] if pro_users_result else 0
         
@@ -624,19 +624,20 @@ def admin_dashboard():
         # Pro用户分类统计
         cursor.execute("""
             SELECT 
-                pro_type,
+                pro_status,
                 COUNT(*) as total,
-                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
-            FROM pro_users 
-            GROUP BY pro_type
+                SUM(CASE WHEN pro_status = 'active' THEN 1 ELSE 0 END) as active
+            FROM users 
+            GROUP BY pro_status
         """)
         user_stats = cursor.fetchall()
         
         # 最近激活记录
         cursor.execute("""
-            SELECT user_email, pro_type, activated_at 
-            FROM pro_users 
-            ORDER BY activated_at DESC 
+            SELECT email, pro_status, pro_activated_at 
+            FROM users 
+            WHERE pro_activated_at IS NOT NULL
+            ORDER BY pro_activated_at DESC 
             LIMIT 10
         """)
         recent_activations = cursor.fetchall()
