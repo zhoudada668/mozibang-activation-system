@@ -242,7 +242,7 @@ def statistics():
         revenue_estimation = stats.get_revenue_estimation()
         
         # 计算总收入
-        total_revenue = sum(item['subtotal'] for item in revenue_estimation)
+        total_revenue = revenue_estimation.get('total_estimated_revenue', 0)
         
         # 获取最近激活用户
         conn = get_db_connection()
@@ -277,7 +277,7 @@ def statistics():
                              activation_overview=activation_overview,
                              user_stats=user_stats,
                              daily_trends=daily_trends,
-                             revenue_estimation=revenue_estimation,
+                             revenue_estimation=revenue_estimation.get('revenue_by_type', []),
                              total_revenue=total_revenue,
                              recent_users=recent_users,
                              expiring_users=expiring_users)

@@ -100,10 +100,10 @@
                         <tbody>
                             {% for revenue in revenue_estimation %}
                             <tr>
-                                <td><span class="badge badge-success">{{ revenue.pro_type }}</span></td>
-                                <td>{{ revenue.count }}</td>
+                                <td><span class="badge badge-success">{{ revenue.code_type }}</span></td>
+                                <td>{{ revenue.activated_count }}</td>
                                 <td>¥{{ revenue.unit_price }}</td>
-                                <td>¥{{ revenue.subtotal }}</td>
+                                <td>¥{{ revenue.total_revenue }}</td>
                             </tr>
                             {% endfor %}
                             <tr class="table-warning">
