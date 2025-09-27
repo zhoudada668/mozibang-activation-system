@@ -667,7 +667,7 @@ def statistics():
         revenue_estimation = stats.get_revenue_estimation()
         
         # 计算总收入
-        total_revenue = sum(item['subtotal'] for item in revenue_estimation)
+        total_revenue = revenue_estimation.get('total_estimated_revenue', 0)
         
         # 获取最近激活用户
         conn = get_db_connection()
