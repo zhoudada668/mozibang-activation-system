@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 import uuid
 import os
 from functools import wraps
+from statistics_report import ActivationStatistics
 
 app = Flask(__name__)
 app.secret_key = 'mozibang-admin-secret-key-2024'  # 生产环境应使用环境变量
@@ -329,6 +330,30 @@ def api_statistics():
         })
     except Exception as e:
         return jsonify({'error': str(e)})
+
+@app.route('/statistics')
+@login_required
+def statistics():
+    """统计报表页面"""
+    try:
+        # 使用MySQL连接创建统计对象
+        stats = ActivationStatistics(get_db_connection())
+        
+        # 获取统计数据
+        daily_trends = stats.get_daily_activation_trend(days=30)
+        code_stats = stats.get_code_type_distribution()
+        user_activity = stats.get_user_activity_report()
+        
+        return render_template('statistics.html', 
+                             daily_trends=daily_trends,
+                             code_stats=code_stats,
+                             user_activity=user_activity)
+    except Exception as e:
+        flash(f'获取统计数据失败: {str(e)}', 'error')
+        return render_template('statistics.html', 
+                             daily_trends=[],
+                             code_stats=[],
+                             user_activity=[])
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

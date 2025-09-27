@@ -59,7 +59,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_user' not in session:
-            return redirect(url_for('login'))
+            return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -167,6 +167,34 @@ def health_check():
         'database': 'sqlite',
         'database_file': DB_PATH
     })
+
+@app.route('/api/fix_database', methods=['POST'])
+@verify_api_key
+def fix_database():
+    """修复数据库 - 创建缺失的表"""
+    try:
+        from auto_create_pro_users import create_pro_users_table
+        success = create_pro_users_table()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Database tables fixed successfully',
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to fix database tables',
+                'timestamp': datetime.now().isoformat()
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Database fix error: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/api/activate', methods=['POST'])
 @verify_api_key
@@ -599,7 +627,7 @@ def statistics():
         # 获取各种统计数据
         activation_overview = stats.get_activation_overview()
         user_stats = stats.get_user_statistics()
-        daily_trends = stats.get_daily_activation_trends()
+        daily_trends = stats.get_daily_activation_trend(days=30)
         revenue_estimation = stats.get_revenue_estimation()
         
         # 计算总收入

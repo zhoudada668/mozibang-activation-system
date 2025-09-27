@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试详情页面 - 提取详情功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .panel-body.single {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .test-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .other-content {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h2>测试页面说明</h2>
+        <p>这是一个用于测试提取详情功能的页面。扩展程序应该能够提取下面 <code>div.panel-body.single</code> 中的内容。</p>
+    </div>
+
+    <div class="other-content">
+        <h3>这是其他内容区域</h3>
+        <p>这部分内容不应该被提取，因为它不在目标选择器范围内。</p>
+    </div>
+
+    <div class="panel-body single">
+        <h1>这是要提取的详情内容</h1>
+        <p>这是第一段详情文本。这段文本应该被扩展程序的提取详情功能正确提取。</p>
+        
+        <h2>详情子标题</h2>
+        <p>这是第二段详情文本，包含更多的信息和内容。</p>
+        
+        <h3>技术规格</h3>
+        <ul>
+            <li>功能特性1：支持自动提取</li>
+            <li>功能特性2：支持批量处理</li>
+            <li>功能特性3：支持多种格式导出</li>
+        </ul>
+        
+        <h3>使用说明</h3>
+        <ol>
+            <li>首先点击"批量提取数据"按钮</li>
+            <li>然后点击"批量提取详情"按钮</li>
+            <li>最后点击"导出CSV"按钮</li>
+        </ol>
+        
+        <p><strong>重要提示：</strong>这是一个测试页面，用于验证扩展程序的详情提取功能是否正常工作。</p>
+        
+        <div>
+            <h4>嵌套内容测试</h4>
+            <p>这是嵌套在div中的内容，也应该被正确提取。</p>
+            <span>这是span标签中的内容。</span>
+        </div>
+    </div>
+
+    <div class="other-content">
+        <h3>页面底部内容</h3>
+        <p>这也是其他内容区域，不应该被提取。</p>
+    </div>
+
+    <script>
+        // 添加一些测试用的JavaScript
+        console.log('测试详情页面已加载');
+        console.log('目标选择器: div.panel-body.single');
+        
+        // 检查目标元素是否存在
+        const targetElement = document.querySelector('div.panel-body.single');
+        if (targetElement) {
+            console.log('找到目标元素:', targetElement);
+            console.log('目标元素内容长度:', targetElement.innerText.length);
+        } else {
+            console.error('未找到目标元素');
+        }
+    </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ MoziBang 激活码系统统计报表模块
 """
 
 import sqlite3
+import pymysql
 import json
 import datetime
 from collections import defaultdict
@@ -23,11 +24,18 @@ def get_db_connection():
 class ActivationStatistics:
     """激活码统计类"""
     
-    def __init__(self):
-        self.conn = get_db_connection()
+    def __init__(self, db_connection=None):
+        """初始化统计类，支持传入外部数据库连接"""
+        if db_connection:
+            self.conn = db_connection
+            self.is_mysql = True
+        else:
+            self.conn = get_db_connection()
+            self.is_mysql = False
     
     def __del__(self):
-        if hasattr(self, 'conn'):
+        # 如果是外部传入的连接，不要关闭它
+        if hasattr(self, 'conn') and not self.is_mysql:
             self.conn.close()
     
     def get_activation_overview(self):
@@ -97,24 +105,45 @@ class ActivationStatistics:
         """获取每日激活趋势（最近N天）"""
         cursor = self.conn.cursor()
         
-        cursor.execute("""
-            SELECT 
-                DATE(activated_at) as activation_date,
-                COUNT(*) as activation_count,
-                COUNT(DISTINCT user_email) as unique_users
-            FROM pro_users 
-            WHERE activated_at >= datetime('now', '-{} days')
-            GROUP BY DATE(activated_at)
-            ORDER BY activation_date DESC
-        """.format(days))
+        if self.is_mysql:
+            # MySQL语法
+            cursor.execute("""
+                SELECT 
+                    DATE(activated_at) as activation_date,
+                    COUNT(*) as activation_count,
+                    COUNT(DISTINCT user_email) as unique_users
+                FROM pro_users 
+                WHERE activated_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                GROUP BY DATE(activated_at)
+                ORDER BY activation_date DESC
+            """, (days,))
+        else:
+            # SQLite语法
+            cursor.execute("""
+                SELECT 
+                    DATE(activated_at) as activation_date,
+                    COUNT(*) as activation_count,
+                    COUNT(DISTINCT user_email) as unique_users
+                FROM pro_users 
+                WHERE activated_at >= datetime('now', '-{} days')
+                GROUP BY DATE(activated_at)
+                ORDER BY activation_date DESC
+            """.format(days))
         
         trend_data = []
         for row in cursor.fetchall():
-            trend_data.append({
-                'date': row['activation_date'],
-                'activations': row['activation_count'],
-                'unique_users': row['unique_users']
-            })
+            if self.is_mysql:
+                trend_data.append({
+                    'date': str(row['activation_date']),
+                    'activations': row['activation_count'],
+                    'unique_users': row['unique_users']
+                })
+            else:
+                trend_data.append({
+                    'date': row['activation_date'],
+                    'activations': row['activation_count'],
+                    'unique_users': row['unique_users']
+                })
         
         return trend_data
     

@@ -238,7 +238,7 @@ def statistics():
         # 获取各种统计数据
         activation_overview = stats.get_activation_overview()
         user_stats = stats.get_user_statistics()
-        daily_trends = stats.get_daily_activation_trends()
+        daily_trends = stats.get_daily_activation_trend()
         revenue_estimation = stats.get_revenue_estimation()
         
         # 计算总收入
