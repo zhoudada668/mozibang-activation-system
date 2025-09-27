@@ -180,7 +180,7 @@ def activate_code():
         # 检查激活码是否存在且可用
         cursor.execute("""
             SELECT * FROM activation_codes 
-            WHERE code = ? AND status = 'active'
+            WHERE code = ? AND is_used = 0 AND is_disabled = 0
         """, (activation_code,))
         code_record = cursor.fetchone()
         
@@ -196,7 +196,7 @@ def activate_code():
         cursor.execute("SELECT * FROM users WHERE email = ?", (user_email,))
         existing_user = cursor.fetchone()
         
-        if existing_user and existing_user[2] == 'active':  # pro_status字段
+        if existing_user and existing_user[3] == 'active':  # pro_status字段
             conn.close()
             return jsonify({
                 'success': False,
@@ -208,11 +208,11 @@ def activate_code():
         expires_at = None
         is_lifetime = False
         
-        if code_record[1] == 'pro_lifetime':  # type字段
+        if code_record[2] == 'pro_lifetime':  # code_type字段
             is_lifetime = True
-        elif code_record[1] == 'pro_1year':
+        elif code_record[2] == 'pro_1year':
             expires_at = (datetime.now() + timedelta(days=365)).isoformat()
-        elif code_record[1] == 'pro_6month':
+        elif code_record[2] == 'pro_6month':
             expires_at = (datetime.now() + timedelta(days=180)).isoformat()
         else:
             # 默认为1年
@@ -226,7 +226,7 @@ def activate_code():
             # 标记激活码为已使用
             cursor.execute("""
                 UPDATE activation_codes 
-                SET status = 'used', user_email = ?, activated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                SET is_used = 1, used_by = ?, used_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                 WHERE code = ?
             """, (user_email, activation_code))
             
@@ -254,7 +254,7 @@ def activate_code():
                 'message': 'Activation successful',
                 'data': {
                     'user_email': user_email,
-                    'pro_type': code_record[1],  # type字段
+                    'pro_type': code_record[2],  # code_type字段
                     'is_lifetime': is_lifetime,
                     'expires_at': expires_at,
                     'user_token': user_token,
@@ -268,6 +268,73 @@ def activate_code():
             
     except Exception as e:
         print(f"Activation error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Internal server error',
+            'error_code': 'INTERNAL_ERROR'
+        }), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/check', methods=['POST'])
+@verify_api_key
+def check_code():
+    """检查激活码状态"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid JSON data',
+                'error_code': 'INVALID_DATA'
+            }), 400
+        
+        activation_code = data.get('code', '').strip().upper()
+        
+        if not activation_code:
+            return jsonify({
+                'success': False,
+                'message': 'Activation code is required',
+                'error_code': 'MISSING_CODE'
+            }), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 检查激活码是否存在
+        cursor.execute("""
+            SELECT code, code_type, is_used, is_disabled, used_by, used_at, created_at
+            FROM activation_codes 
+            WHERE code = ?
+        """, (activation_code,))
+        code_record = cursor.fetchone()
+        
+        if not code_record:
+            conn.close()
+            return jsonify({
+                'success': False,
+                'message': 'Activation code not found',
+                'error_code': 'CODE_NOT_FOUND'
+            }), 404
+        
+        # 返回激活码状态信息
+        return jsonify({
+            'success': True,
+            'data': {
+                'code': code_record[0],
+                'code_type': code_record[1],
+                'is_used': bool(code_record[2]),
+                'is_disabled': bool(code_record[3]),
+                'used_by': code_record[4],
+                'used_at': code_record[5],
+                'created_at': code_record[6],
+                'is_available': not code_record[2] and not code_record[3]  # 未使用且未禁用
+            }
+        })
+        
+    except Exception as e:
+        print(f"Check code error: {str(e)}")
         return jsonify({
             'success': False,
             'message': 'Internal server error',
