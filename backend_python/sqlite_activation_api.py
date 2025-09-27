@@ -1001,6 +1001,13 @@ if __name__ == '__main__':
     # 初始化数据库
     init_database()
     
+    # 自动创建缺失的表（特别是pro_users表）
+    try:
+        from auto_create_pro_users import create_pro_users_table
+        create_pro_users_table()
+    except Exception as e:
+        print(f"⚠️ 自动创建表时出现警告: {e}")
+    
     # 根据环境配置端口和调试模式
     port = int(os.environ.get('PORT', 5001))
     debug = os.environ.get('FLASK_ENV') != 'production'
