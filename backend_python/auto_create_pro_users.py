@@ -35,14 +35,18 @@ def create_pro_users_table():
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pro_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT NOT NULL UNIQUE,
-            name TEXT NOT NULL,
+            user_email TEXT NOT NULL UNIQUE,
+            user_name TEXT DEFAULT NULL,
             pro_type TEXT NOT NULL CHECK (pro_type IN ('pro_lifetime', 'pro_1year', 'pro_6month')),
             activation_code TEXT NOT NULL,
             activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             expires_at TIMESTAMP NULL DEFAULT NULL,
-            last_login TIMESTAMP NULL DEFAULT NULL,
+            is_lifetime BOOLEAN DEFAULT FALSE,
             is_active BOOLEAN DEFAULT TRUE,
+            last_login TIMESTAMP NULL DEFAULT NULL,
+            user_token TEXT DEFAULT NULL,
+            revoked_at TIMESTAMP NULL DEFAULT NULL,
+            revoked_reason TEXT DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -50,7 +54,7 @@ def create_pro_users_table():
         
         # 创建索引
         cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_pro_users_email ON pro_users(email)
+        CREATE INDEX IF NOT EXISTS idx_pro_users_user_email ON pro_users(user_email)
         """)
         
         cursor.execute("""
