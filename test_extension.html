@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>MoziBang Extension Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        .result { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MoziBang Extension Test</h1>
+        <p>测试Chrome扩展的激活功能与云端API的集成</p>
+        
+        <div class="form-group">
+            <label>激活码:</label>
+            <input type="text" id="activationCode" value="MOZIBANG-PRO-2024" />
+        </div>
+        <div class="form-group">
+            <label>用户邮箱:</label>
+            <input type="email" id="userEmail" value="extensiontest@example.com" />
+        </div>
+        
+        <button onclick="testActivation()">测试激活</button>
+        <button onclick="testVerification()">测试验证</button>
+        <button onclick="showConfig()">显示配置</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script src="activation_config.js"></script>
+    <script src="activation.js"></script>
+    <script>
+        // 显示当前配置
+        function showConfig() {
+            const config = window.ActivationConfig.getCurrentConfig();
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="result info">
+                <h3>当前配置:</h3>
+                <p>API地址: ${config.API_BASE_URL}</p>
+                <p>API密钥: ${config.API_KEY}</p>
+                <p>环境: ${window.location.href.includes('localhost') ? '开发环境' : '生产环境'}</p>
+            </div>`;
+        }
+        
+        async function testActivation() {
+            const code = document.getElementById('activationCode').value;
+            const email = document.getElementById('userEmail').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="result info">正在测试激活...</div>';
+            
+            try {
+                const result = await window.ActivationManager.activateCode(code, email);
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="result success">
+                        <h3>激活成功！</h3>
+                        <p>消息: ${result.message}</p>
+                        <p>Pro类型: ${result.data.pro_type}</p>
+                        <p>激活时间: ${result.data.activated_at}</p>
+                        <p>过期时间: ${result.data.expires_at}</p>
+                        <p>是否终身: ${result.data.is_lifetime ? '是' : '否'}</p>
+                    </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">
+                        <h3>激活失败！</h3>
+                        <p>消息: ${result.message}</p>
+                        <p>错误代码: ${result.code || 'N/A'}</p>
+                    </div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>网络错误</h3>
+                    <p>错误: ${error.message}</p>
+                </div>`;
+            }
+        }
+        
+        async function testVerification() {
+            const email = document.getElementById('userEmail').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="result info">正在验证Pro状态...</div>';
+            
+            try {
+                const result = await window.ActivationManager.verifyProStatus(email);
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="result success">
+                        <h3>验证成功！</h3>
+                        <p>Pro状态: ${result.data.is_pro ? '是' : '否'}</p>
+                        ${result.data.is_pro ? `
+                            <p>Pro类型: ${result.data.pro_type}</p>
+                            <p>激活时间: ${result.data.activated_at}</p>
+                            <p>过期时间: ${result.data.expires_at}</p>
+                        ` : ''}
+                    </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">
+                        <h3>验证失败！</h3>
+                        <p>消息: ${result.message}</p>
+                    </div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>网络错误</h3>
+                    <p>错误: ${error.message}</p>
+                </div>`;
+            }
+        }
+        
+        // 页面加载时显示配置并初始化
+        window.onload = function() {
+            // 初始化ActivationManager配置
+            if (window.ActivationManager) {
+                window.ActivationManager.init();
+            }
+            showConfig();
+        };
+    </script>
+</body>
+</html>

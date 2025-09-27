@@ -18,6 +18,24 @@ import logging
 
 app = Flask(__name__)
 
+# 添加moment模板过滤器和全局函数
+@app.template_filter('moment')
+def moment_filter(dt):
+    """moment过滤器，用于格式化时间"""
+    if dt:
+        return dt
+    return datetime.now()
+
+@app.template_global()
+def moment():
+    """全局模板函数，返回当前时间的datetime对象"""
+    return datetime.now()
+
+# 添加datetime到模板上下文
+@app.context_processor
+def inject_datetime():
+    return {'datetime': datetime, 'moment': datetime.now()}
+
 # 配置
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'mozibang-secret-key-2024')
 API_SECRET_KEY = os.environ.get('API_SECRET_KEY', 'mozibang_api_secret_2024')

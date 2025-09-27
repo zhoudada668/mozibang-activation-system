@@ -1,8 +1,18 @@
 // MoziBang 激活码管理系统
 window.ActivationManager = {
-  // API配置
+  // API配置 - 将在配置文件加载后更新
   API_BASE_URL: 'http://localhost:5001/api',
   API_KEY: 'mozibang_api_secret_2024',
+  
+  // 初始化配置
+  init() {
+    if (window.ActivationConfig) {
+      const config = window.ActivationConfig.getCurrentConfig();
+      this.API_BASE_URL = config.API_BASE_URL;
+      this.API_KEY = config.API_KEY;
+      console.log('ActivationManager配置已更新:', config);
+    }
+  },
   
   // 激活码验证和激活
   async activateCode(activationCode, userEmail, userName = '') {
@@ -311,23 +321,50 @@ window.ActivationManager = {
     let userName = '';
     
     try {
+      console.log('🔍 开始检查用户认证状态...');
+      console.log('window.userProfile:', window.userProfile);
+      
       // 从认证状态获取用户信息
       if (window.userProfile && window.userProfile.email) {
         userEmail = window.userProfile.email;
         userName = window.userProfile.name || '';
+        console.log('✅ 从window.userProfile获取用户信息:', { userEmail, userName });
       } else {
+        console.log('⚠️ window.userProfile不可用，尝试从存储获取...');
         // 尝试从存储获取
         const authResult = await chrome.storage.local.get('authToken');
+        console.log('存储中的authToken:', authResult.authToken ? '存在' : '不存在');
+        
         if (authResult.authToken && authResult.authToken.email) {
           userEmail = authResult.authToken.email;
           userName = authResult.authToken.name || '';
+          console.log('✅ 从存储获取用户信息:', { userEmail, userName });
+        } else if (authResult.authToken) {
+          // 如果有token但没有email，尝试从Google API获取
+          console.log('🔄 尝试从Google API获取用户信息...');
+          try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${authResult.authToken}` }
+            });
+            if (response.ok) {
+              const userInfo = await response.json();
+              userEmail = userInfo.email;
+              userName = userInfo.name || '';
+              console.log('✅ 从Google API获取用户信息:', { userEmail, userName });
+            }
+          } catch (apiError) {
+            console.error('❌ 从Google API获取用户信息失败:', apiError);
+          }
         }
       }
       
       if (!userEmail) {
+        console.error('❌ 无法获取用户邮箱，显示登录提示');
         this.showActivationStatus('请先登录Google账号', 'error');
         return;
       }
+      
+      console.log('✅ 用户认证检查完成:', { userEmail, userName });
     } catch (error) {
       console.error('获取用户信息失败:', error);
       this.showActivationStatus('获取用户信息失败，请重新登录', 'error');
@@ -377,6 +414,7 @@ window.ActivationManager = {
 // 在DOM加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
   if (window.ActivationManager) {
+    window.ActivationManager.init(); // 初始化配置
     window.ActivationManager.initActivationEvents();
   }
 });

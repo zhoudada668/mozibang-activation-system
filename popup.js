@@ -64,6 +64,7 @@ async function checkAuthStatus() {
       
       if (response.ok) {
         userProfile = await response.json();
+        window.userProfile = userProfile; // 设置为全局变量
         console.log('👤 获取到用户信息:', userProfile);
         userAuthenticated = true;
         updateUIForAuthenticatedUser();
@@ -101,6 +102,7 @@ async function handleAuthError() {
   
   userAuthenticated = false;
   userProfile = null;
+  window.userProfile = null; // 清除全局变量
   updateUIForUnauthenticatedUser();
 }
 
@@ -202,6 +204,7 @@ async function authenticateWithGoogle() {
         const userInfo = await response.json();
         console.log('👤 Token验证成功，用户信息:', userInfo);
         userProfile = userInfo;
+        window.userProfile = userProfile; // 设置为全局变量
         userAuthenticated = true;
         updateUIForAuthenticatedUser();
         
@@ -289,9 +292,10 @@ async function logout() {
         }
       });
     });
-    
+   // 清理状态
     userAuthenticated = false;
     userProfile = null;
+    window.userProfile = null; // 清除全局变量
     updateUIForUnauthenticatedUser();
     
     const status = document.getElementById('status');

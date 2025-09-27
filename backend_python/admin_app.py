@@ -20,6 +20,24 @@ app = Flask(__name__)
 app.secret_key = 'mozibang-admin-secret-key-2024'  # 生产环境应使用环境变量
 CORS(app)
 
+# 添加moment模板过滤器和全局函数
+@app.template_filter('moment')
+def moment_filter(dt):
+    """moment过滤器，用于格式化时间"""
+    if dt:
+        return dt
+    return datetime.now()
+
+@app.template_global()
+def moment():
+    """全局模板函数，返回当前时间的datetime对象"""
+    return datetime.now()
+
+# 添加datetime到模板上下文
+@app.context_processor
+def inject_datetime():
+    return {'datetime': datetime, 'moment': datetime.now()}
+
 # 数据库配置
 DB_CONFIG = {
     'host': 'localhost',

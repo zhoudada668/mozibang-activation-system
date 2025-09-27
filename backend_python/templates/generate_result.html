@@ -29,7 +29,7 @@
                         <strong>批次名称：</strong> {{ batch_name }}
                     </div>
                     <div class="col-md-4">
-                        <strong>生成时间：</strong> {{ moment().format('YYYY-MM-DD HH:mm:ss') }}
+                        <strong>生成时间：</strong> {{ moment.strftime('%Y-%m-%d %H:%M:%S') }}
                     </div>
                 </div>
             </div>
