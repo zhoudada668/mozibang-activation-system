@@ -674,6 +674,48 @@ def statistics():
         flash(f'获取统计数据失败: {str(e)}', 'error')
         return render_template('statistics.html')
 
+@app.route('/api/debug/table-info', methods=['GET', 'POST'])
+def debug_table_info():
+    """调试端点：获取数据库表结构信息"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 获取所有表名
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = cursor.fetchall()
+        
+        table_info = {}
+        for table in tables:
+            table_name = table[0]
+            cursor.execute(f"PRAGMA table_info({table_name})")
+            columns = cursor.fetchall()
+            table_info[table_name] = [
+                {
+                    'name': col[1],
+                    'type': col[2],
+                    'not_null': bool(col[3]),
+                    'default_value': col[4],
+                    'primary_key': bool(col[5])
+                }
+                for col in columns
+            ]
+        
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'tables': table_info,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 if __name__ == '__main__':
     print("🚀 启动 MoziBang 激活码验证API (SQLite版本)")
     print(f"📁 数据库文件: {DB_PATH}")
