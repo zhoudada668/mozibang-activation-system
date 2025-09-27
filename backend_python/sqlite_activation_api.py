@@ -196,6 +196,34 @@ def fix_database():
             'timestamp': datetime.now().isoformat()
         }), 500
 
+@app.route('/api/fix_schema', methods=['POST'])
+@verify_api_key
+def fix_schema():
+    """修复数据库字段 - 修复user_email字段问题"""
+    try:
+        from cloud_db_schema_fix import fix_pro_users_schema
+        success = fix_pro_users_schema()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Database schema fixed successfully - user_email field corrected',
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to fix database schema',
+                'timestamp': datetime.now().isoformat()
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Schema fix error: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 @app.route('/api/activate', methods=['POST'])
 @verify_api_key
 def activate_code():
