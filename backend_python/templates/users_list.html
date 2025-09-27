@@ -24,7 +24,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h6 class="card-title">永久Pro用户</h6>
-                        <h4 class="mb-0">{{ users | selectattr('pro_type', 'equalto', 'lifetime') | list | length }}</h4>
+                        <h4 class="mb-0">{{ users | selectattr('3', 'equalto', 'pro_lifetime') | list | length }}</h4>
                     </div>
                     <i class="bi bi-infinity" style="font-size: 2rem; opacity: 0.7;"></i>
                 </div>
@@ -37,7 +37,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h6 class="card-title">一年期Pro用户</h6>
-                        <h4 class="mb-0">{{ users | selectattr('pro_type', 'equalto', '1year') | list | length }}</h4>
+                        <h4 class="mb-0">{{ users | selectattr('3', 'equalto', 'pro_1year') | list | length }}</h4>
                     </div>
                     <i class="bi bi-calendar" style="font-size: 2rem; opacity: 0.7;"></i>
                 </div>
@@ -50,7 +50,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h6 class="card-title">半年期Pro用户</h6>
-                        <h4 class="mb-0">{{ users | selectattr('pro_type', 'equalto', '6month') | list | length }}</h4>
+                        <h4 class="mb-0">{{ users | selectattr('3', 'equalto', 'pro_6month') | list | length }}</h4>
                     </div>
                     <i class="bi bi-calendar2-week" style="font-size: 2rem; opacity: 0.7;"></i>
                 </div>
@@ -137,29 +137,29 @@
                         <td>{{ loop.index }}</td>
                         <td>
                             <div>
-                                <strong>{{ user.user_name or '未设置' }}</strong>
+                                <strong>{{ user[2] or '未设置' }}</strong>
                                 <br>
-                                <small class="text-muted">{{ user.user_email }}</small>
+                                <small class="text-muted">{{ user[1] }}</small>
                             </div>
                         </td>
                         <td>
-                            {% if user.pro_type == 'lifetime' %}
+                            {% if user[3] == 'pro_lifetime' %}
                                 <span class="badge bg-success">永久版</span>
-                            {% elif user.pro_type == '1year' %}
+                            {% elif user[3] == 'pro_1year' %}
                                 <span class="badge bg-warning">一年版</span>
-                            {% elif user.pro_type == '6month' %}
+                            {% elif user[3] == 'pro_6month' %}
                                 <span class="badge bg-info">半年版</span>
                             {% else %}
-                                <span class="badge bg-secondary">未知</span>
+                                <span class="badge bg-secondary">{{ user[3] or '未知' }}</span>
                             {% endif %}
                         </td>
                         <td>
-                            <small>{{ user.activated_at.strftime('%Y-%m-%d %H:%M') if user.activated_at else '-' }}</small>
+                            <small>{{ user[5].strftime('%Y-%m-%d %H:%M') if user[5] else '-' }}</small>
                         </td>
                         <td>
-                            {% if user.expires_at %}
-                                <small>{{ user.expires_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                {% if user.expires_at < moment %}
+                            {% if user[6] %}
+                                <small>{{ user[6].strftime('%Y-%m-%d %H:%M') }}</small>
+                                {% if user[6] < moment %}
                                     <br><small class="text-danger">已过期</small>
                                 {% endif %}
                             {% else %}
@@ -167,9 +167,9 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if user.activation_code_used %}
-                                <span class="code-display small">{{ user.activation_code_used }}</span>
-                                <button class="btn btn-link btn-sm p-0 ms-1" onclick="copyCode('{{ user.activation_code_used }}')" title="复制">
+                            {% if user[4] %}
+                                <span class="code-display small">{{ user[4] }}</span>
+                                <button class="btn btn-link btn-sm p-0 ms-1" onclick="copyCode('{{ user[4] }}')" title="复制">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
                             {% else %}
@@ -177,11 +177,11 @@
                             {% endif %}
                         </td>
                         <td>
-                            <small>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '从未登录' }}</small>
+                            <small>{{ user[9].strftime('%Y-%m-%d %H:%M') if user[9] else '从未登录' }}</small>
                         </td>
                         <td>
-                            {% if user.is_pro %}
-                                {% if user.expires_at and user.expires_at < moment %}
+                            {% if user[8] %}
+                                {% if user[6] and user[6] < moment %}
                                     <span class="badge bg-danger">已过期</span>
                                 {% else %}
                                     <span class="badge bg-success">有效</span>
@@ -193,12 +193,12 @@
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
                                 <button class="btn btn-outline-info btn-action" 
-                                        onclick="showUserDetails('{{ user.user_email }}')" title="详情">
+                                        onclick="showUserDetails('{{ user[1] }}')" title="详情">
                                     <i class="bi bi-info-circle"></i>
                                 </button>
-                                {% if user.is_pro and (not user.expires_at or user.expires_at > moment) %}
+                                {% if user[8] and (not user[6] or user[6] > moment) %}
                                     <button class="btn btn-outline-warning btn-action" 
-                                            onclick="revokeProStatus('{{ user.user_email }}')" title="撤销Pro">
+                                            onclick="revokeProStatus('{{ user[1] }}')" title="撤销Pro">
                                         <i class="bi bi-x-circle"></i>
                                     </button>
                                 {% endif %}
@@ -208,8 +208,11 @@
                     {% else %}
                     <tr>
                         <td colspan="9" class="text-center py-4">
-                            <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
-                            <p class="text-muted mt-2">暂无Pro用户数据</p>
+                            <div class="text-muted">
+                                <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                                <h5>暂无Pro用户数据</h5>
+                                <p>还没有用户激活Pro版本</p>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
